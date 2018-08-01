@@ -1,10 +1,15 @@
-TARGET := libc.so
+ifdef SHARED
+	TARGET  := libc.so
+	LDFLAGS := -shared -pie
+else
+	TARGET  := libc.a
+endif
 
-SUB_OBJS := stdlib/stdlib.a malloc/malloc.a assert/assert.a misc/misc.a
+SUB_OBJS := stdlib/stdlib.a io/io.a malloc/malloc.a assert/assert.a misc/misc.a
 EXPORT   := export.map
 
-CFLAGS   := -Wall -fPIE -g3
-LDFLAGS  := -shared -pie -nostdlib -E --version-script=$(EXPORT)
+CFLAGS   += -Wall -fPIE -g3 -masm=intel
+LDFLAGS  := -nostdlib -E --version-script=$(EXPORT)
 
 .PHONY: all
 all: $(TARGET)

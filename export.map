@@ -1,5 +1,7 @@
 {
 	global:
+		read;
+		write;
 		abort;
 		exit;
 		mmap;
