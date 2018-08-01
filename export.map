@@ -1,0 +1,16 @@
+{
+	global:
+		abort;
+		exit;
+		mmap;
+		munmap;
+		brk;
+		sbrk;
+		malloc;
+		calloc;
+		realloc;
+		free;
+		mamset;
+		memcpy;
+	local: *;
+};
