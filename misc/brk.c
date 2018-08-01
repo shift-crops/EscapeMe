@@ -4,17 +4,19 @@
 static void *__curbrk;
 
 int brk(void *addr){
-	int res;
+	void *res;
 
 	asm volatile (
-		"mov rax, 0x0b\r\n"
+		"mov rax, 0x0c\r\n"
 		"syscall\r\n"
-		"mov %0, eax"
-	: "=r"(res) :: "rax");
+		"mov %0, rax"
+	: "=A"(res) :: "rax");
 
-	if(res == 0)
-		__curbrk = addr;
-	return res;
+	if(res < 0)
+		return -1;
+
+	__curbrk = (void*)res;
+	return 0;
 }
 
 void *sbrk(intptr_t increment){
