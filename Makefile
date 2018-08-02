@@ -9,6 +9,7 @@ LDFLAGS  := -shared -pie -nostdlib -E --version-script=$(EXPORT)
 
 .PHONY: all
 all: $(SHARED_TARGET) $(STATIC_TARGET)
+	$(MAKE) -C test
 
 $(SHARED_TARGET): $(SUB_OBJS)
 	$(LD) $(LDFLAGS) --whole-archive $^ -o $@
@@ -24,6 +25,7 @@ $(SUB_OBJS): FORCE
 .PHONY: clean
 clean: 
 	dirname $(SUB_OBJS) | xargs -l $(MAKE) clean -C
+	$(MAKE) clean -C test
 	$(RM) $(SHARED_TARGET) $(STATIC_TARGET)
 
 FORCE:

@@ -1,5 +1,11 @@
+.*
+!.gitignore
+
+*.txt
 *.swp
+
 *.so
 *.a
+*.bin
 *.o
 *.d
