@@ -21,7 +21,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -c -MMD -MP $<
 
 %.o: %.S
-	$(CC) -c $<
+	$(CC) -c $^
 
 .PHONY: clean
 clean:

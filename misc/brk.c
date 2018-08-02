@@ -1,16 +1,13 @@
 #include <stdint.h>
 #include <stddef.h>
+#include "../syscall.h"
 
 static void *__curbrk;
 
 int brk(void *addr){
 	void *res;
 
-	asm volatile (
-		"mov rax, 0x0c\r\n"
-		"syscall\r\n"
-		"mov %0, rax"
-	: "=A"(res) :: "rax");
+	syscall(res, NR_brk);
 
 	if(res < 0)
 		return -1;
