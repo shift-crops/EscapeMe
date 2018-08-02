@@ -1,5 +1,9 @@
+.*
+!.gitignore
+
 *.swp
 *.so
 *.a
+*.bin
 *.o
 *.d
