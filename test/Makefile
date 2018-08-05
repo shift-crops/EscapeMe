@@ -8,7 +8,7 @@ CFLAGS  := -nostdlib -Wall
 all: $(SHARED_TARGET) $(STATIC_TARGET)
 
 %-shared.bin: %.c ../libc.so
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $< -L.. -lc -o $@
 
 %-static.bin: %.c ../libc.a
 	$(CC) $(CFLAGS) $^ -o $@

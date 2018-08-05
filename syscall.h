@@ -1,7 +1,7 @@
 #define str(s) 		#s
 
 #define syscall_woret(nr)	asm volatile("mov rax, " str(nr) "\r\nsyscall")
-#define syscall(x, nr)		asm volatile("mov rax, " str(nr) "\r\nsyscall\r\nmov %0, rax":"=A"(x)::"rax")
+#define syscall(x, nr)		asm volatile("mov rax, " str(nr) "\r\nsyscall":"=A"(x))
 #define syscall1(x, nr, arg1) \
 	do { asm volatile("mov rdi, %0"::"A"((long)arg1)); syscall(x, nr); } while(0)
 #define syscall2(x, nr, arg1, arg2) \
