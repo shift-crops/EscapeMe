@@ -12,8 +12,8 @@
 #include "vm.h"
 #include "bits.h"
 #include "kvm_handler.h"
-#include "gmalloc.h"
-#include "debug.h"
+#include "utils/gmalloc.h"
+#include "utils/debug.h"
 
 #define GUEST_MEMSIZE	0x800000
 
@@ -24,14 +24,21 @@ static void set_long_mode(struct vm *vm, int vcpufd);
 static int run_vm(struct vm *vm, unsigned vcpuid, unsigned long entry);
 static int load_image(struct vm *vm, int fd);
 
+__attribute__((constructor))
+void init(void){
+	setbuf(stdout, NULL);
+}
+
 int main(int argc, char *argv[]){
 	struct vm *vm;
 	int fd;
 	unsigned long entry;
+	char *image_file;
 
-	setbuf(stdout, NULL);
-	if((fd = open("kernel.bin", O_RDONLY)) < 0){
-		perror("open kernel.bin");
+	image_file = argc > 1 ? argv[1] : "kernel.bin";
+
+	if((fd = open(image_file, O_RDONLY)) < 0){
+		perror(image_file);
 		return -1;
 	}
 
@@ -51,7 +58,7 @@ int main(int argc, char *argv[]){
 static struct vm *init_vm(unsigned ncpu, size_t mem_size){
 	struct vm *vm;
 	int fd, vmfd;
-   
+
 	if(ncpu < 1 || ncpu > 4)
 		return NULL;
 
@@ -92,7 +99,7 @@ error:
 static int init_vcpu(struct vm *vm){
 	size_t mmap_size;
 	int i;
-	
+
 	if((mmap_size = ioctl(vm->fd, KVM_GET_VCPU_MMAP_SIZE, NULL)) <= 0){
 		perror("ioctl KVM_GET_VCPU_MMAP_SIZE");
 		return -1;

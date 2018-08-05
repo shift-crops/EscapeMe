@@ -188,7 +188,7 @@ static gmchunkptr _int_gmalloc_manual(gmstate av, unsigned long addr, size_t byt
 
 	if(addr & GMALLOC_ALIGN_MASK)
 		return NULL;
-	
+
 	nb = REQUEST2SIZE(bytes);
 
 	for(victim = av->top; victim && CHUNK_MEM(victim) > addr; victim = victim->prev);
@@ -327,7 +327,7 @@ static void _alloc_split(gmstate av, gmchunkptr p, size_t nb){
 	gmchunkptr remainder;
 
 	size = CHUNK_SIZE(p);
-	assert(nb && size >= nb); 
+	assert(nb && size >= nb);
 
 	remainder_size = size - nb;
 	if(!remainder_size)

@@ -2,7 +2,7 @@
 #include <linux/kvm.h>
 #include "kvm_handler.h"
 #include "vm.h"
-#include "gmalloc.h"
+#include "utils/gmalloc.h"
 
 void kvm_handle_io(struct vm *vm, struct kvm_regs *regs){
 

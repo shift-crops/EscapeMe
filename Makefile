@@ -1,22 +1,21 @@
-TARGET := kvm.elf
-SRCS := vm.c kvm_handler.c gmalloc.c debug.c
+TARGET  := kvm.elf
 
-OBJS := $(SRCS:.c=.o)
-DEPS := $(SRCS:.c=.d)
-
-CFLAGS := -Wall -g3
+SUB_OBJS := vm/vm.a utils/utils.a
+CFLAGS   := -Wall -I.. -g3
 
 .PHONY: all
 all: $(TARGET)
 
--include $(DEPS)
+$(TARGET): $(SUB_OBJS)
+	$(CC) $(LDFLAGS) $^ -o $@
 
-$(TARGET): $(OBJS)
-	$(CC) $^ -o $@
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c -MMD -MP $<
+$(SUB_OBJS): FORCE
+	$(MAKE) -C $(dir $@) CFLAGS="$(CFLAGS)" $(notdir $@)
 
 .PHONY: clean
 clean:
-	$(RM) $(DEPS) $(OBJS) $(TARGET)
+	dirname $(SUB_OBJS) | xargs -l $(MAKE) clean -C
+	$(MAKE) clean -C test
+	$(RM) $(SHARED_TARGET) $(STATIC_TARGET)
+
+FORCE:
