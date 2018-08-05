@@ -1,4 +1,4 @@
 TARGET := utils.a
-SRCS := gmalloc.c debug.c
+SRCS := gmalloc.c paging.c debug.c
 
 include ../template.mk

@@ -13,6 +13,7 @@
 #include "bits.h"
 #include "kvm_handler.h"
 #include "utils/gmalloc.h"
+#include "utils/paging.h"
 #include "utils/debug.h"
 
 static int init_vcpu(struct vm *vm);
@@ -154,6 +155,8 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 
 	for(;;){
 		struct kvm_regs regs;
+		struct kvm_sregs sregs;
+		uint64_t gaddr;
 
 		if(ioctl(vcpufd, KVM_RUN, 0) < 0) {
 			perror("ioctl KVM_RUN");
@@ -175,11 +178,17 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 					perror("ioctl KVM_GET_REGS");
 					return -1;
 				}
+				if(ioctl(vcpufd, KVM_GET_SREGS, &sregs)){
+					perror("ioctl KVM_GET_REGS");
+					return -1;
+				}
 
-				assert_addr(vm, regs.rip);
-				if(memcmp(guest2phys(vm, regs.rip), "\x0f\x01\xc1", 3))
+				gaddr = paging(vm, sregs.cr3, regs.rip);
+				assert_addr(vm, gaddr);
+				if(memcmp(guest2phys(vm, gaddr), "\x0f\x01\xc1", 3) \
+					&& memcmp(guest2phys(vm, gaddr), "\x0f\x01\xd9", 3))
 					break;
-				*(char*)guest2phys(vm, regs.rip+2) = 0xd9;
+				*(char*)guest2phys(vm, gaddr+2) = 0xd9;
 			case KVM_EXIT_HYPERCALL:	// Ha~~~~???  Nande Ugokan???
 				//printf("HYPERCALL\n");
 				kvm_handle_hypercall(vm, vcpu);
@@ -189,7 +198,7 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 				getchar();
 				return -1;
 		}
-		dump_regs(vcpufd);
+		//dump_regs(vcpufd);
 	}
 
 	return 0;
