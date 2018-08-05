@@ -5,10 +5,11 @@
 
 #define DEBUG_PRINT(...)	fprintf(stderr, __VA_ARGS__)
 
-void dump_segment_register(struct kvm_segment *s){
-	DEBUG_PRINT("base=%016llx limit=%08x selector=%04x type=%02x\n",
-		    s->base, s->limit, s->selector, s->type);
-}
+#define dump_segment_register(n, s) \
+	DEBUG_PRINT("%3s base=%016llx limit=%08x selector=%04x type=%02x dpl=%d db=%d l=%d g=%d avl=%d\n", \
+		    (n), (s)->base, (s)->limit, (s)->selector, (s)->type, (s)->dpl, (s)->db, (s)->l, (s)->g, (s)->avl )
+#define dump_dtable(n, s) \
+	DEBUG_PRINT("%3s base=%016llx limit=%04x \n", (n), (s)->base, (s)->limit)
 
 void dump_regs(int vcpufd){
 	int r;
@@ -31,15 +32,15 @@ void dump_regs(int vcpufd){
 	r = ioctl(vcpufd, KVM_GET_SREGS, &sregs);
 	assert(r != -1);
 
-	DEBUG_PRINT("cs ");
-	dump_segment_register(&sregs.cs);
-	DEBUG_PRINT("ds ");
-	dump_segment_register(&sregs.ds);
-	DEBUG_PRINT("es ");
-	dump_segment_register(&sregs.es);
-	DEBUG_PRINT("ss ");
-	dump_segment_register(&sregs.ss);
-	DEBUG_PRINT("tr ");
-	dump_segment_register(&sregs.tr);
+	dump_segment_register("cs", &sregs.cs);
+	dump_segment_register("ds", &sregs.ds);
+	dump_segment_register("es", &sregs.es);
+	dump_segment_register("ss", &sregs.ss);
+	dump_segment_register("tr", &sregs.tr);
+
+	dump_dtable("gdt", &sregs.gdt);
+	dump_dtable("ldt", &sregs.ldt);
+
 	DEBUG_PRINT("cr0=%016llx\n", sregs.cr0);
+	DEBUG_PRINT("cr3=%016llx\n", sregs.cr3);
 }

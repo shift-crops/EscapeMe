@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
 
@@ -10,13 +11,13 @@
 #define MIN_LARGE_SIZE			(NSMALLBINS * SMALLBIN_WIDTH)
 #define IN_SMALLBIN_RANGE(sz)	((sz) < MIN_LARGE_SIZE)
 
-#define SMALLBIN_INDEX(sz)		(((unsigned long)(sz)) >> 12)
+#define SMALLBIN_INDEX(sz)		(((uint64_t)(sz)) >> 12)
 #define LARGEBIN_INDEX(sz)	\
-	(((((unsigned long) (sz)) >> 14) <= 48) ?  48 + (((unsigned long) (sz)) >> 14) :\
-	 ((((unsigned long) (sz)) >> 17) <= 20) ?  91 + (((unsigned long) (sz)) >> 17) :\
-	 ((((unsigned long) (sz)) >> 20) <= 10) ? 110 + (((unsigned long) (sz)) >> 20) :\
-	 ((((unsigned long) (sz)) >> 23) <= 4) ? 119 + (((unsigned long) (sz)) >> 23) :\
-	 ((((unsigned long) (sz)) >> 27) <= 2) ? 124 + (((unsigned long) (sz)) >> 27) : 126)
+	(((((uint64_t) (sz)) >> 14) <= 48) ?  48 + (((uint64_t) (sz)) >> 14) :\
+	 ((((uint64_t) (sz)) >> 17) <= 20) ?  91 + (((uint64_t) (sz)) >> 17) :\
+	 ((((uint64_t) (sz)) >> 20) <= 10) ? 110 + (((uint64_t) (sz)) >> 20) :\
+	 ((((uint64_t) (sz)) >> 23) <= 4) ? 119 + (((uint64_t) (sz)) >> 23) :\
+	 ((((uint64_t) (sz)) >> 27) <= 2) ? 124 + (((uint64_t) (sz)) >> 27) : 126)
 
 #define GMALLOC_ALIGNMENT		(1 << 12)
 #define GMALLOC_ALIGN_MASK		(GMALLOC_ALIGNMENT - 1)
@@ -34,7 +35,7 @@
 
 
 struct gmalloc_chunk {
-	unsigned long addr;
+	uint64_t addr;
 	size_t size;
 	struct gmalloc_chunk *fd, *bk;
 	struct gmalloc_chunk *next, *prev;
@@ -47,12 +48,13 @@ struct gmalloc_state {
 	gmchunkptr top;
 	gmbinptr bins[NBINS*2];
 
+	size_t inuse;
 	size_t system_mem;
 } arena;
 typedef struct gmalloc_state *gmstate;
 
 static gmchunkptr _int_gmalloc(gmstate av, size_t bytes);
-static gmchunkptr _int_gmalloc_manual(gmstate av, unsigned long addr, size_t bytes);
+static gmchunkptr _int_gmalloc_manual(gmstate av, uint64_t addr, size_t bytes);
 static void _int_gfree(gmstate av, gmchunkptr p);
 
 void init_gmem_manage(size_t mem_size){
@@ -66,6 +68,7 @@ void init_gmem_manage(size_t mem_size){
 	top->next = top->prev = NULL;
 
 	av->top 		= top;
+	av->inuse		= 0;
 	av->system_mem 	= mem_size;
 
 	for(int i = 0; i < NBINS; i++){
@@ -76,22 +79,22 @@ void init_gmem_manage(size_t mem_size){
 	av->initialized = 1;
 }
 
-unsigned long gmalloc(unsigned long addr, size_t bytes){
+uint64_t gmalloc(uint64_t addr, size_t bytes){
 	gmstate av = &arena;
 	gmchunkptr p;
 
-	if(!av->initialized || bytes > av->system_mem)
+	if(!av->initialized || bytes > av->system_mem - av->inuse)
 		return -1;
 
 	if((p = addr ? _int_gmalloc_manual(av, addr, bytes) : _int_gmalloc(av, bytes))){
-		av->system_mem -= CHUNK_SIZE(p);
+		av->inuse += CHUNK_SIZE(p);
 		return CHUNK_MEM(p);
 	}
 
 	return -1;
 }
 
-int gfree(unsigned long addr){
+int gfree(uint64_t addr){
 	gmstate av = &arena;
 	gmchunkptr p;
 
@@ -101,20 +104,25 @@ int gfree(unsigned long addr){
 	for(p = av->top; p; p = p->prev)
 		if(CHUNK_MEM(p) == addr){
 			_int_gfree(av, p);
-			av->system_mem += CHUNK_SIZE(p);
+			av->inuse -= CHUNK_SIZE(p);
 			return 0;
 		}
 
 	return -1;
 }
 
-unsigned long get_gmem_remain(void){
+uint64_t get_gmem_info(int menu){
 	gmstate av = &arena;
 
-	if(!av->initialized)
-		return -1;
-
-	return av->system_mem;
+	switch(menu){
+		case 0:
+			return av->initialized;
+		case 1:
+			return av->system_mem;
+		case 2:
+			return av->inuse;
+	}
+	return -1;
 }
 
 static void unlink_freelist(gmchunkptr p);
@@ -184,7 +192,7 @@ alloc_complete:
 	return victim;
 }
 
-static gmchunkptr _int_gmalloc_manual(gmstate av, unsigned long addr, size_t bytes){
+static gmchunkptr _int_gmalloc_manual(gmstate av, uint64_t addr, size_t bytes){
 	gmchunkptr victim, tmp = NULL;
 	size_t nb;
 

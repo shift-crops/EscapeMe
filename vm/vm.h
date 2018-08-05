@@ -2,6 +2,8 @@
 #define _VM_H
 
 #include <stddef.h>
+#include <stdint.h>
+#include <assert.h>
 
 #define check_addr(vm, addr)		(addr < vm->mem_size)
 #define assert_addr(vm, addr)		assert(addr < vm->mem_size)
@@ -25,6 +27,6 @@ struct vm {
 
 struct vm *init_vm(unsigned ncpu, size_t mem_size);
 int load_image(struct vm *vm, int fd);
-int run_vm(struct vm *vm, unsigned vcpuid, unsigned long entry);
+int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry);
 
 #endif

@@ -110,7 +110,7 @@ static int init_memory(struct vm *vm){
 		.flags = 0,
 		.guest_phys_addr = 0,
 		.memory_size = mem_size,
-		.userspace_addr = (unsigned long)mem
+		.userspace_addr = (uint64_t)mem
 	};
 
 	if (ioctl(vm->vmfd, KVM_SET_USER_MEMORY_REGION, &region) < 0){
@@ -125,7 +125,7 @@ error:
 	return -1;
 }
 
-int run_vm(struct vm *vm, unsigned vcpuid, unsigned long entry){
+int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 	if(vcpuid < 0 || vcpuid >= vm->ncpu)
 		return -1;
 
@@ -160,8 +160,8 @@ int run_vm(struct vm *vm, unsigned vcpuid, unsigned long entry){
 			return -1;
 		}
 
-		//printf("\n\nRESG\n");
-		//dump_regs(vcpufd);
+		printf("\n\nRESG\n");
+		dump_regs(vcpufd);
 		switch(run->exit_reason){
 			case KVM_EXIT_HLT:
 				printf("HLT\n");
@@ -177,17 +177,19 @@ int run_vm(struct vm *vm, unsigned vcpuid, unsigned long entry){
 				}
 
 				assert_addr(vm, regs.rip);
-				if(memcmp(guest2phys(vm, regs.rip), "\x0f\x01\xd9", 3) \
-					&& memcmp(guest2phys(vm, regs.rip), "\x0f\x01\xc1", 3))
+				if(memcmp(guest2phys(vm, regs.rip), "\x0f\x01\xc1", 3))
 					break;
+				*(char*)guest2phys(vm, regs.rip+2) = 0xd9;
 			case KVM_EXIT_HYPERCALL:	// Ha~~~~???  Nande Ugokan???
 				//printf("HYPERCALL\n");
 				kvm_handle_hypercall(vm, vcpu);
 				break;
 			default:
 				printf("reason : %d\n", run->exit_reason);
+				getchar();
+				return -1;
 		}
-		//dump_regs(vcpufd);
+		dump_regs(vcpufd);
 	}
 
 	return 0;
@@ -215,9 +217,9 @@ static void set_long_mode(struct vm *vm, int vcpufd){
 	seg.selector = 2 << 3;
 	sregs.ds = sregs.ss = seg;
 
-	uint64_t pml4_addr 	= vm->mem_size - 0x1000;
-	uint64_t pdpt_addr 	= pml4_addr - 0x1000*(((vm->mem_size-1)>>39) + 1);
-	uint64_t pd_addr 	= pdpt_addr - 0x1000*(((vm->mem_size-1)>>30) + 1);
+	uint64_t pml4_addr 	= gmalloc(0, 0x1000);
+	uint64_t pdpt_addr 	= gmalloc(0, 0x1000*(((vm->mem_size-1)>>39) + 1));
+	uint64_t pd_addr 	= gmalloc(0, 0x1000*(((vm->mem_size-1)>>30) + 1));
 
 	assert_addr(vm, pml4_addr);
 	assert_addr(vm, pdpt_addr);
@@ -247,7 +249,7 @@ static void set_long_mode(struct vm *vm, int vcpufd){
 
 int load_image(struct vm *vm, int fd){
 	struct stat stbuf;
-	unsigned long addr;
+	uint64_t addr;
 	size_t size;
 
 	if(fstat(fd, &stbuf) == -1){

@@ -26,6 +26,7 @@ int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu){
 	unsigned nr = regs.rax;
 	unsigned long arg[] = {regs.rbx, regs.rcx, regs.rdx, regs.rsi};
 
+	//printf("nr : %d\n", nr);
 	switch(nr){
 		case 0x10:		// read(0, buf, size)
 			if(check_addr(vm, arg[0]))
@@ -36,13 +37,15 @@ int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu){
 				ret = write(STDOUT_FILENO, guest2phys(vm, arg[0]), arg[1]);
 			break;
 		case 0x20:
-			ret = get_gmem_remain();
+			ret = get_gmem_info(arg[0]);
 			break;
 		case 0x21:		// gmalloc(addr, size)
-			ret = gmalloc(arg[0], arg[1]);
+			if((ret = gmalloc(arg[0], arg[1])) != -1)
+				assert_addr(vm, ret);
 			break;
 		case 0x22:		// gfree(addr);
-			ret = gfree(arg[0]);
+			if(check_addr(vm, arg[0]))
+				ret = gfree(arg[0]);
 			break;
 	}
 
