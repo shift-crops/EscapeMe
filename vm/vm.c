@@ -15,47 +15,11 @@
 #include "utils/gmalloc.h"
 #include "utils/debug.h"
 
-#define GUEST_MEMSIZE	0x800000
-
-static struct vm *init_vm(unsigned ncpu, size_t mem_size);
 static int init_vcpu(struct vm *vm);
 static int init_memory(struct vm *vm);
 static void set_long_mode(struct vm *vm, int vcpufd);
-static int run_vm(struct vm *vm, unsigned vcpuid, unsigned long entry);
-static int load_image(struct vm *vm, int fd);
 
-__attribute__((constructor))
-void init(void){
-	setbuf(stdout, NULL);
-}
-
-int main(int argc, char *argv[]){
-	struct vm *vm;
-	int fd;
-	unsigned long entry;
-	char *image_file;
-
-	image_file = argc > 1 ? argv[1] : "kernel.bin";
-
-	if((fd = open(image_file, O_RDONLY)) < 0){
-		perror(image_file);
-		return -1;
-	}
-
-	if(!(vm = init_vm(1, GUEST_MEMSIZE)))
-		return -1;
-
-	if((entry = load_image(vm, fd)) & 0xfff)
-		return -1;
-
-	close(fd);
-
-	run_vm(vm, 0, entry);
-
-	return 0;
-}
-
-static struct vm *init_vm(unsigned ncpu, size_t mem_size){
+struct vm *init_vm(unsigned ncpu, size_t mem_size){
 	struct vm *vm;
 	int fd, vmfd;
 
@@ -161,7 +125,7 @@ error:
 	return -1;
 }
 
-static int run_vm(struct vm *vm, unsigned vcpuid, unsigned long entry){
+int run_vm(struct vm *vm, unsigned vcpuid, unsigned long entry){
 	if(vcpuid < 0 || vcpuid >= vm->ncpu)
 		return -1;
 
@@ -196,11 +160,6 @@ static int run_vm(struct vm *vm, unsigned vcpuid, unsigned long entry){
 			return -1;
 		}
 
-		if(ioctl(vcpufd, KVM_GET_REGS, &regs)){
-			perror("ioctl KVM_GET_REGS");
-			return -1;
-		}
-
 		//printf("\n\nRESG\n");
 		//dump_regs(vcpufd);
 		switch(run->exit_reason){
@@ -209,25 +168,24 @@ static int run_vm(struct vm *vm, unsigned vcpuid, unsigned long entry){
 				return 0;
 			case KVM_EXIT_IO:
 				//printf("IO\n");
-				kvm_handle_io(vm, &regs);
+				kvm_handle_io(vm, vcpu);
 				break;
 			case KVM_EXIT_DEBUG:
+				if(ioctl(vcpufd, KVM_GET_REGS, &regs)){
+					perror("ioctl KVM_GET_REGS");
+					return -1;
+				}
+
 				assert_addr(vm, regs.rip);
 				if(memcmp(guest2phys(vm, regs.rip), "\x0f\x01\xd9", 3) \
 					&& memcmp(guest2phys(vm, regs.rip), "\x0f\x01\xc1", 3))
 					break;
 			case KVM_EXIT_HYPERCALL:	// Ha~~~~???  Nande Ugokan???
 				//printf("HYPERCALL\n");
-				kvm_handle_hypercall(vm, &regs);
-				regs.rip += 3;
+				kvm_handle_hypercall(vm, vcpu);
 				break;
 			default:
 				printf("reason : %d\n", run->exit_reason);
-		}
-
-		if(ioctl(vcpufd, KVM_SET_REGS, &regs) < 0){
-			perror("ioctl KVM_SET_REGS");
-			return -1;
 		}
 		//dump_regs(vcpufd);
 	}
@@ -287,7 +245,7 @@ static void set_long_mode(struct vm *vm, int vcpufd){
 	ioctl(vcpufd, KVM_SET_SREGS, &sregs);
 }
 
-static int load_image(struct vm *vm, int fd){
+int load_image(struct vm *vm, int fd){
 	struct stat stbuf;
 	unsigned long addr;
 	size_t size;

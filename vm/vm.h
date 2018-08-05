@@ -23,4 +23,8 @@ struct vm {
 	struct vcpu vcpu[];
 };
 
+struct vm *init_vm(unsigned ncpu, size_t mem_size);
+int load_image(struct vm *vm, int fd);
+int run_vm(struct vm *vm, unsigned vcpuid, unsigned long entry);
+
 #endif

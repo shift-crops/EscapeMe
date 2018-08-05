@@ -83,10 +83,12 @@ unsigned long gmalloc(unsigned long addr, size_t bytes){
 	if(!av->initialized || bytes > av->system_mem)
 		return -1;
 
-	p = addr ? _int_gmalloc_manual(av, addr, bytes) : _int_gmalloc(av, bytes);
-	av->system_mem -= CHUNK_SIZE(p);
+	if((p = addr ? _int_gmalloc_manual(av, addr, bytes) : _int_gmalloc(av, bytes))){
+		av->system_mem -= CHUNK_SIZE(p);
+		return CHUNK_MEM(p);
+	}
 
-	return CHUNK_MEM(p);
+	return -1;
 }
 
 int gfree(unsigned long addr){

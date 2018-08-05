@@ -1,17 +1,30 @@
+#include <stdio.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 #include <linux/kvm.h>
 #include "kvm_handler.h"
 #include "vm.h"
 #include "utils/gmalloc.h"
 
-void kvm_handle_io(struct vm *vm, struct kvm_regs *regs){
-
+int kvm_handle_io(struct vm *vm, struct vcpu *vcpu){
+	/*
+	int vcpufd = vcpu->fd;
+	struct kvm_run *run = vcpu->run;
+	 */
+	return 0;
 }
 
-void kvm_handle_hypercall(struct vm *vm, struct kvm_regs *regs){
-	unsigned nr = regs->rax;
-	unsigned long arg[] = {regs->rbx, regs->rcx, regs->rdx, regs->rsi};
+int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu){
+	struct kvm_regs regs;
+	int vcpufd = vcpu->fd;
 	unsigned long ret = -1;
+
+	if(ioctl(vcpufd, KVM_GET_REGS, &regs)){
+		perror("ioctl KVM_GET_REGS");
+		return -1;
+	}
+	unsigned nr = regs.rax;
+	unsigned long arg[] = {regs.rbx, regs.rcx, regs.rdx, regs.rsi};
 
 	switch(nr){
 		case 0x10:		// read(0, buf, size)
@@ -33,5 +46,13 @@ void kvm_handle_hypercall(struct vm *vm, struct kvm_regs *regs){
 			break;
 	}
 
-	regs->rax = ret;
+	regs.rax  = ret;
+	regs.rip += 3;
+
+	if(ioctl(vcpufd, KVM_SET_REGS, &regs) < 0){
+		perror("ioctl KVM_SET_REGS");
+		return -1;
+	}
+
+	return 0;
 }

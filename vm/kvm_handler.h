@@ -4,7 +4,7 @@
 #include <linux/kvm.h>
 #include "vm.h"
 
-void kvm_handle_io(struct vm *vm, struct kvm_regs *regs);
-void kvm_handle_hypercall(struct vm *vm, struct kvm_regs *regs);
+int kvm_handle_io(struct vm *vm, struct vcpu *vcpu);
+int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu);
 
 #endif
