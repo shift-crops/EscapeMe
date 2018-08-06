@@ -8,13 +8,14 @@ void init_gdt(void);
 void set_handler(void* func);
 void prepare_user(void);
 void switch_user(uint64_t rip, uint64_t rsp);
-void hlt(void);
+void syscall_handler(void);
 
 void kernel_main(void){
 	init_pagetable();
+	// --- new paging enabled ---
 	init_gdt();
 
-	set_handler(hlt+0x8000000000);
+	set_handler(syscall_handler);
 
 	prepare_user();
 	switch_user(0x0000400000, 0x7ffffffff0);
@@ -172,8 +173,16 @@ void prepare_user(){
 	pt += 512;
 	pt[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (page_phys+0x1000);
 
-	page[0] = 0x0f;
-	page[1] = 0x05;
-	page[2] = 0x90;
-	page[3] = 0xf4;
+	page[0] = 0x90;
+
+	page[1] = 0x0f;
+	page[2] = 0x05;
+
+	page[3] = 0x31;
+	page[4] = 0xc0;
+	page[5] = 0xb0;
+	page[6] = 0x3c;
+
+	page[7] = 0x0f;
+	page[8] = 0x05;
 }

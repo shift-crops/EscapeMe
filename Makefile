@@ -1,7 +1,7 @@
 TARGET	:= kernel.elf kernel.bin
 #TARGET	:= kernel.bin
 
-SRCS 	:= kernel.c startup.s hypercall.s misc.s
+SRCS 	:= kernel.c startup.s hypercall.s syscall.c misc.s
 CSRCS	:= $(filter %.c,$(SRCS))
 SSRCS	:= $(filter %.s,$(SRCS))
 
