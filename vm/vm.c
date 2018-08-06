@@ -13,7 +13,7 @@
 #include "bits.h"
 #include "kvm_handler.h"
 #include "utils/gmalloc.h"
-#include "utils/paging.h"
+#include "utils/translate.h"
 #include "utils/debug.h"
 
 static int init_vcpu(struct vm *vm);
@@ -138,8 +138,10 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 		.control	= KVM_GUESTDBG_ENABLE | KVM_GUESTDBG_SINGLESTEP,
 	};
 
-	if (ioctl(vcpufd, KVM_SET_GUEST_DEBUG, &debug) < 0)
+	if (ioctl(vcpufd, KVM_SET_GUEST_DEBUG, &debug) < 0){
 		perror("KVM_SET_GUEST_DEBUG");
+		return -1;
+	}
 
 	set_long_mode(vm, vcpufd);
 
@@ -174,24 +176,31 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 				kvm_handle_io(vm, vcpu);
 				break;
 			case KVM_EXIT_DEBUG:
-				if(ioctl(vcpufd, KVM_GET_REGS, &regs)){
+				if(ioctl(vcpufd, KVM_GET_REGS, &regs) < 0){
 					perror("ioctl KVM_GET_REGS");
 					return -1;
 				}
-				if(ioctl(vcpufd, KVM_GET_SREGS, &sregs)){
-					perror("ioctl KVM_GET_REGS");
+				if(ioctl(vcpufd, KVM_GET_SREGS, &sregs) < 0){
+					perror("ioctl KVM_GET_SREGS");
 					return -1;
 				}
 
-				gaddr = paging(vm, sregs.cr3, regs.rip);
-				assert_addr(vm, gaddr);
-				if(memcmp(guest2phys(vm, gaddr), "\x0f\x01\xc1", 3) \
-					&& memcmp(guest2phys(vm, gaddr), "\x0f\x01\xd9", 3))
-					break;
-				*(char*)guest2phys(vm, gaddr+2) = 0xd9;
-			case KVM_EXIT_HYPERCALL:	// Ha~~~~???  Nande Ugokan???
-				//printf("HYPERCALL\n");
-				kvm_handle_hypercall(vm, vcpu);
+				gaddr = translate(vcpufd, regs.rip);
+
+				if(!memcmp(guest2phys(vm, gaddr), "\x0f\x01\xc1", 3) \
+					|| !memcmp(guest2phys(vm, gaddr), "\x0f\x01\xd9", 3)){
+					if(sregs.cs.dpl != 0)
+						return 1;
+
+					kvm_handle_hypercall(vm, vcpu);
+					*(char*)guest2phys(vm, gaddr+2) = 0xd9;
+				}
+				else if(!memcmp(guest2phys(vm, gaddr), "\x0f\x05", 2)){
+					if(sregs.cs.dpl != 3)
+						return 1;
+
+					kvm_handle_syscall(vm, vcpu);
+				}
 				break;
 			default:
 				printf("reason : %d\n", run->exit_reason);
@@ -219,7 +228,10 @@ static void set_long_mode(struct vm *vm, int vcpufd){
 		.g = 1, 				// 4KB granularity
 	};
 
-	ioctl(vcpufd, KVM_GET_SREGS, &sregs);
+	if(ioctl(vcpufd, KVM_GET_SREGS, &sregs) < 0){
+		perror("ioctl KVM_GET_SREGS");
+		return -1;
+	}
 
 	sregs.cs = seg;
 	seg.type = 3; 					// Data: read/write, accessed
@@ -253,7 +265,10 @@ static void set_long_mode(struct vm *vm, int vcpufd){
 	sregs.cr0  = CR0_PE | CR0_MP | CR0_ET | CR0_NE | CR0_WP | CR0_AM | CR0_PG;
 	sregs.efer = EFER_LME | EFER_LMA;
 
-	ioctl(vcpufd, KVM_SET_SREGS, &sregs);
+	if(ioctl(vcpufd, KVM_SET_SREGS, &sregs) < 0){
+		perror("ioctl KVM_SET_SREGS");
+		return -1;
+	}
 }
 
 int load_image(struct vm *vm, int fd){

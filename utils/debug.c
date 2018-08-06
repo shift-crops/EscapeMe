@@ -42,5 +42,6 @@ void dump_regs(int vcpufd){
 	dump_dtable("ldt", &sregs.ldt);
 
 	DEBUG_PRINT("cr0=%016llx\n", sregs.cr0);
+	DEBUG_PRINT("cr2=%016llx\n", sregs.cr2);
 	DEBUG_PRINT("cr3=%016llx\n", sregs.cr3);
 }

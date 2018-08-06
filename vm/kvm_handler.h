@@ -6,5 +6,6 @@
 
 int kvm_handle_io(struct vm *vm, struct vcpu *vcpu);
 int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu);
+int kvm_handle_syscall(struct vm *vm, struct vcpu *vcpu);
 
 #endif
