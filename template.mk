@@ -1,7 +1,7 @@
 CSRCS := $(filter %.c,$(SRCS))
-SSRCS := $(filter %.S,$(SRCS))
+SSRCS := $(filter %.s,$(SRCS))
 
-OBJS := $(CSRCS:.c=.o) $(SSRCS:.S=.o)
+OBJS := $(CSRCS:.c=.o) $(SSRCS:.s=.o)
 DEPS := $(CSRCS:.c=.d)
 
 ifndef CFLAGS
@@ -20,7 +20,7 @@ $(TARGET): $(OBJS)
 %.o: %.c
 	$(CC) $(CFLAGS) -c -MMD -MP $<
 
-%.o: %.S
+%.o: %.s
 	$(CC) -c $^
 
 .PHONY: clean
