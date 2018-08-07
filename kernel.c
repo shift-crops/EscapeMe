@@ -1,12 +1,12 @@
 #include <stdint.h>
+#include "kernel.h"
+#include "bits.h"
 #include "hypercall.h"
+#include "usermem.h"
 #include "misc.h"
-
-#define STRAIGHT_BASE	0x8040000000
 
 static void init_pagetable(void);
 static void init_gdt(void);
-static int prepare_user(void);
 static void _syscall_handler(void);
 
 void kernel_main(void){
@@ -25,26 +25,25 @@ hlt:
 	goto hlt;
 }
 
-#define PDE64_PRESENT	1
-#define PDE64_RW		(1U << 1)
-#define PDE64_USER		(1U << 2)
-#define PDE64_ACCESSED	(1U << 5)
-#define PDE64_DIRTY		(1U << 6)
-#define PDE64_PS		(1U << 7)
-#define PDE64_GLOBAL	(1 << 8)
-#define PDE64_NX		(0UL << 63)
+/*
+0x8000000000 ~ 0xffffffffff : Kernel
+  0x8000000000 ~ 0x8000004000 : binary		1:0:0:0-3
+  0x8000200000 ~ 0x8000204000 : bss			1:0:1:0-3
+  0x8040000000 ~ 0x807ffff000 : straight	1:1:0-511:0-511
+  0xffffff0000 ~ 0xfffffff000 : stack		1:511:511:496-511
+*/
 
 static void init_pagetable(void){
 	uint64_t mem_size;
 	uint64_t *pml4, *pdpt, *pd, *pt;
-	uint64_t sp, cr3;
+	uint64_t bss_phys, sp_phys, cr3;
 
 	mem_size = hc_mem_total();
 	asm volatile (
 		"mov %0, rsp\r\n"
 		"mov %1, cr3"
-	:"=r"(sp), "=r"(cr3));
-	sp = sp & ~0xfff;
+	:"=r"(sp_phys), "=r"(cr3));
+	sp_phys &= ~0xfff;
 
 	pml4 = hc_malloc(0, 0x1000);
 
@@ -56,10 +55,17 @@ static void init_pagetable(void){
 	pdpt[0] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pd;
 
 	uint16_t n_pt = (mem_size>>21) + 1;
-	pt = hc_malloc(0, 0x1000*(1+n_pt+1));
+	pt = hc_malloc(0, 0x1000*(2+n_pt+1));
 	pd[0] = PDE64_PRESENT | PDE64_GLOBAL | (uint64_t)pt;
-	for(int i = 0; i < 8; i++)
+	for(int i = 0; i < 4; i++)
 		pt[i] = PDE64_PRESENT | PDE64_GLOBAL | (i<<12);
+
+	pt += 512;
+	if((bss_phys = (uint64_t)hc_malloc(0, 0x1000*4)) != -1){
+		pd[1] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pt;
+		for(int i = 0; i < 4; i++)
+			pt[i] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (bss_phys+(i<<12));
+	}
 
 	pd += 512;
 	pt += 512;
@@ -76,7 +82,7 @@ static void init_pagetable(void){
 	pdpt[511] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pd;
 	pd[511] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pt;
 	for(int i = 0; i < 2; i++)
-		pt[511-i] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (sp-(i<<12));
+		pt[511-i] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (sp_phys-(i<<12));
 
 	asm volatile (
 		"mov rdx, 0x8000000000\r\n"
@@ -142,45 +148,6 @@ static void init_gdt(void){
 		"lgdt [%0]\r\n"
 		"sti\r\n"
 	::"r"(&gdtr));
-}
-
-static int prepare_user(){
-	uint64_t pml4_phys, pdpt_phys, pd_phys, pt_phys, page_phys;
-	uint64_t *pml4, *pdpt, *pd, *pt;
-
-	asm volatile ("mov %0, cr3":"=r"(pml4_phys));
-	pml4 = (uint64_t*)(pml4_phys+STRAIGHT_BASE);
-
-	if((pdpt_phys = (uint64_t)hc_malloc(0, 0x1000)) == -1)
-		return -1;
-	pdpt = (uint64_t*)(pdpt_phys+STRAIGHT_BASE);
-	pml4[0] = PDE64_PRESENT | PDE64_RW | PDE64_USER | pdpt_phys;
-
-	if((pd_phys = (uint64_t)hc_malloc(0, 0x1000*2)) == -1)
-		return -1;
-	pd = (uint64_t*)(pd_phys+STRAIGHT_BASE);
-	pdpt[0] = PDE64_PRESENT | PDE64_USER | pd_phys;
-	pdpt[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pd_phys+0x1000);
-
-	if((pt_phys = (uint64_t)hc_malloc(0, 0x1000*2)) == -1)
-		return -1;
-	pt = (uint64_t*)(pt_phys+STRAIGHT_BASE);
-	pd[2] = PDE64_PRESENT | PDE64_USER | pt_phys;
-	pd += 512;
-	pd[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pt_phys+0x1000);
-
-	if((page_phys = (uint64_t)hc_load_user(0, 0x1000*2)) == -1)
-		return -1;
-	for(int i = 0; i < 2; i++)
-		pt[i] = PDE64_PRESENT | PDE64_USER | (page_phys+0x1000*i);
-	pt += 512;
-
-	if((page_phys = (uint64_t)hc_malloc(0, 0x1000*4)) == -1)
-		return -1;
-	for(int i = 512-4; i < 512; i++)
-		pt[i] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (page_phys+0x1000*i);
-
-	return 0;
 }
 
 static void _syscall_handler(void){
