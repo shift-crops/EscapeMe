@@ -36,14 +36,16 @@ int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu){
 	unsigned nr = regs.rax;
 	unsigned long arg[] = {regs.rbx, regs.rcx, regs.rdx, regs.rsi};
 
-	//printf("nr : %d\n", nr);
+#ifdef DEBUG
+	printf("nr : %d\n", nr);
+#endif
 	switch(nr){
 		case 0x10:		// read(0, buf, size)
-			if((gaddr = translate(vm, sregs.cr3, arg[0], 0, arg[2])) != -1)
+			if((gaddr = translate(vm, sregs.cr3, arg[0], 1, arg[2])) != -1)
 				ret = read(STDIN_FILENO, guest2phys(vm, gaddr), arg[1]);
 			break;
 		case 0x11:		// write(1, buf, size)
-			if((gaddr = translate(vm, sregs.cr3, arg[0], 1, arg[2])) != -1)
+			if((gaddr = translate(vm, sregs.cr3, arg[0], 0, arg[2])) != -1)
 				ret = write(STDOUT_FILENO, guest2phys(vm, gaddr), arg[1]);
 			break;
 		case 0x20:
@@ -61,6 +63,9 @@ int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu){
 			ret = load_module(vm, 1, arg[0], arg[1]);
 			break;
 	}
+#ifdef DEBUG
+	printf("ret : %d\n", ret);
+#endif
 
 	regs.rax  = ret;
 	regs.rip += 3;

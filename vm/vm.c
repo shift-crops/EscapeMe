@@ -165,13 +165,20 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 			return -1;
 		}
 
-		//dump_regs(vcpufd);
+#ifdef DEBUG
+		dump_regs(vcpufd);
+#endif
 		switch(run->exit_reason){
 			case KVM_EXIT_HLT:
+#ifdef DEBUG
 				printf("HLT\n");
+				getchar();
+#endif
 				return 0;
 			case KVM_EXIT_IO:
-				//printf("IO\n");
+#ifdef DEBUG
+				printf("IO\n");
+#endif
 				kvm_handle_io(vm, vcpu);
 				break;
 			case KVM_EXIT_DEBUG:
@@ -192,7 +199,9 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 					if(sregs.cs.dpl != 0)
 						return 2;
 
-					//printf("HYPERCALL\n");
+#ifdef DEBUG
+					printf("HYPERCALL\n");
+#endif
 					kvm_handle_hypercall(vm, vcpu);
 					*(char*)guest2phys(vm, gaddr+2) = 0xd9;
 				}
@@ -200,15 +209,19 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 					if(sregs.cs.dpl != 3)
 						return 2;
 
-					//printf("SYSCALL\n");
+#ifdef DEBUG
+					printf("SYSCALL\n");
+#endif
 					kvm_handle_syscall(vm, vcpu);
 				}
 				break;
 			default:
+#ifdef DEBUG
 				printf("exit_reason : %d\n", run->exit_reason);
+				getchar();
+#endif
 				return -1;
 		}
-		//dump_regs(vcpufd);
 	}
 
 	return 0;
