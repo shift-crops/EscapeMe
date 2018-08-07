@@ -1,24 +1,24 @@
 #include <stdint.h>
 #include "hypercall.h"
+#include "misc.h"
 
 #define STRAIGHT_BASE	0x8040000000
 
-void init_pagetable(void);
-void init_gdt(void);
-void set_handler(void* func);
-void prepare_user(void);
-void switch_user(uint64_t rip, uint64_t rsp);
-void syscall_handler(void);
+static void init_pagetable(void);
+static void init_gdt(void);
+static int prepare_user(void);
+static void _syscall_handler(void);
 
 void kernel_main(void){
 	init_pagetable();
 	// --- new paging enabled ---
 	init_gdt();
 
-	set_handler(syscall_handler);
+	set_handler(_syscall_handler);
+	if(prepare_user() < 0)
+		goto hlt;
 
-	prepare_user();
-	switch_user(0x0000400000, 0x7ffffffff0);
+	switch_user(0x000040017c, 0x7ffffffff0);
 
 hlt:
 	asm("hlt");
@@ -34,7 +34,7 @@ hlt:
 #define PDE64_GLOBAL	(1 << 8)
 #define PDE64_NX		(0UL << 63)
 
-void init_pagetable(void){
+static void init_pagetable(void){
 	uint64_t mem_size;
 	uint64_t *pml4, *pdpt, *pd, *pt;
 	uint64_t sp, cr3;
@@ -96,7 +96,7 @@ void init_pagetable(void){
 	::"r"(pml4));
 }
 
-void init_gdt(void){
+static void init_gdt(void){
 	#define tsdp(type, s, dpl, p)	(type | (s << 4) | (dpl << 5) | (p << 7))
 	#define saldg(slh, avl, l, db, g)	(slh | (avl << 4) | (l << 5) | (db << 6) | (g << 7))
 
@@ -144,45 +144,45 @@ void init_gdt(void){
 	::"r"(&gdtr));
 }
 
-void prepare_user(){
+static int prepare_user(){
 	uint64_t pml4_phys, pdpt_phys, pd_phys, pt_phys, page_phys;
 	uint64_t *pml4, *pdpt, *pd, *pt;
-	char *page;
 
 	asm volatile ("mov %0, cr3":"=r"(pml4_phys));
 	pml4 = (uint64_t*)(pml4_phys+STRAIGHT_BASE);
 
-	pdpt_phys = (uint64_t)hc_malloc(0, 0x1000);
+	if((pdpt_phys = (uint64_t)hc_malloc(0, 0x1000)) == -1)
+		return -1;
 	pdpt = (uint64_t*)(pdpt_phys+STRAIGHT_BASE);
 	pml4[0] = PDE64_PRESENT | PDE64_RW | PDE64_USER | pdpt_phys;
 
-	pd_phys = (uint64_t)hc_malloc(0, 0x1000*2);
+	if((pd_phys = (uint64_t)hc_malloc(0, 0x1000*2)) == -1)
+		return -1;
 	pd = (uint64_t*)(pd_phys+STRAIGHT_BASE);
 	pdpt[0] = PDE64_PRESENT | PDE64_USER | pd_phys;
 	pdpt[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pd_phys+0x1000);
 
-	pt_phys = (uint64_t)hc_malloc(0, 0x1000*2);
+	if((pt_phys = (uint64_t)hc_malloc(0, 0x1000*2)) == -1)
+		return -1;
 	pt = (uint64_t*)(pt_phys+STRAIGHT_BASE);
 	pd[2] = PDE64_PRESENT | PDE64_USER | pt_phys;
 	pd += 512;
 	pd[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pt_phys+0x1000);
 
-	page_phys = (uint64_t)hc_malloc(0, 0x1000*2);
-	page = (char*)(page_phys+STRAIGHT_BASE);
-	pt[0] = PDE64_PRESENT | PDE64_USER | page_phys;
+	if((page_phys = (uint64_t)hc_load_user(0, 0x1000*2)) == -1)
+		return -1;
+	for(int i = 0; i < 2; i++)
+		pt[i] = PDE64_PRESENT | PDE64_USER | (page_phys+0x1000*i);
 	pt += 512;
-	pt[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (page_phys+0x1000);
 
-	page[0] = 0x90;
+	if((page_phys = (uint64_t)hc_malloc(0, 0x1000*4)) == -1)
+		return -1;
+	for(int i = 512-4; i < 512; i++)
+		pt[i] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (page_phys+0x1000*i);
 
-	page[1] = 0x0f;
-	page[2] = 0x05;
+	return 0;
+}
 
-	page[3] = 0x31;
-	page[4] = 0xc0;
-	page[5] = 0xb0;
-	page[6] = 0x3c;
-
-	page[7] = 0x0f;
-	page[8] = 0x05;
+static void _syscall_handler(void){
+	asm("leave\r\njmp syscall_handler");
 }

@@ -1,8 +1,8 @@
 global hc_read, hc_write
 global hc_mem_inuse, hc_mem_total, hc_malloc, hc_free
+global hc_load_user
 
 hc_read:
-	mov al, [rdi]
 	mov rax, 0x10
 	mov rbx, rdi
 	mov rcx, rsi
@@ -10,7 +10,6 @@ hc_read:
 	ret
 
 hc_write:
-	mov al, [rdi]
 	mov rax, 0x11
 	mov rbx, rdi
 	mov rcx, rsi
@@ -39,5 +38,12 @@ hc_malloc:
 hc_free:
 	mov rax, 0x22
 	mov rbx, rdi
+	vmmcall
+	ret
+
+hc_load_user:
+	mov rax, 0x30
+	mov rbx, rdi
+	mov rcx, rsi
 	vmmcall
 	ret

@@ -10,7 +10,7 @@ DEPS	:= $(CSRCS:.c=.d)
 
 AS		:= nasm
 
-CFLAGS	:= -Wall -fno-stack-protector -g3 -masm=intel
+CFLAGS	:= -Wall -fno-stack-protector -fPIE -g3 -masm=intel
 LDFLAGS	:= -nostdlib -Ttext 0x0
 
 .PHONY: all
