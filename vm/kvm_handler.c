@@ -3,10 +3,11 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/kvm.h>
-#include "kvm_handler.h"
-#include "vm.h"
-#include "utils/gmalloc.h"
+#include "vm/vm.h"
+#include "vm/kvm_handler.h"
 #include "utils/translate.h"
+#include "utils/gmalloc.h"
+#include "utils/module.h"
 
 int kvm_handle_io(struct vm *vm, struct vcpu *vcpu){
 	/*
@@ -38,23 +39,26 @@ int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu){
 	//printf("nr : %d\n", nr);
 	switch(nr){
 		case 0x10:		// read(0, buf, size)
-			if((gaddr = translate(vcpufd, arg[0])))
+			if((gaddr = translate(vm, sregs.cr3, arg[0], 0, arg[2])) != -1)
 				ret = read(STDIN_FILENO, guest2phys(vm, gaddr), arg[1]);
 			break;
 		case 0x11:		// write(1, buf, size)
-			if((gaddr = translate(vcpufd, arg[0])))
+			if((gaddr = translate(vm, sregs.cr3, arg[0], 1, arg[2])) != -1)
 				ret = write(STDOUT_FILENO, guest2phys(vm, gaddr), arg[1]);
 			break;
 		case 0x20:
 			ret = get_gmem_info(arg[0]);
 			break;
-		case 0x21:		// gmalloc(addr, size)
+		case 0x21:		// gmalloc(phys_addr, size=0)
 			if((ret = gmalloc(arg[0], arg[1])) != -1)
 				assert_addr(vm, ret);
 			break;
-		case 0x22:		// gfree(addr);
+		case 0x22:		// gfree(phys_addr);
 			if(check_addr(vm, arg[0]))
 				ret = gfree(arg[0]);
+			break;
+		case 0x30:		// load_module(1, phys_addr=0, size=0)
+			ret = load_module(vm, 1, arg[0], arg[1]);
 			break;
 	}
 
@@ -135,6 +139,7 @@ int kvm_handle_syscall(struct vm *vm, struct vcpu *vcpu){
 	regs.r11 = regs.rflags;
 	regs.rip = syscall_handler;
 	regs.rflags &= flag_mask;
+	//printf("%x:%p\n", kernel_cs, regs.rip);
 
 	/*
 	uint64_t *gdt_base = (uint64_t*)translate(vcpufd, sregs.gdt.base);

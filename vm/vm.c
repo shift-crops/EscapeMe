@@ -7,18 +7,17 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
-#include <sys/stat.h>
 #include <linux/kvm.h>
-#include "vm.h"
 #include "bits.h"
-#include "kvm_handler.h"
+#include "vm/vm.h"
+#include "vm/kvm_handler.h"
 #include "utils/gmalloc.h"
 #include "utils/translate.h"
 #include "utils/debug.h"
 
 static int init_vcpu(struct vm *vm);
 static int init_memory(struct vm *vm);
-static void set_long_mode(struct vm *vm, int vcpufd);
+static int set_long_mode(struct vm *vm, int vcpufd);
 
 struct vm *init_vm(unsigned ncpu, size_t mem_size){
 	struct vm *vm;
@@ -143,7 +142,8 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 		return -1;
 	}
 
-	set_long_mode(vm, vcpufd);
+	if(set_long_mode(vm, vcpufd) < 0)
+		return -1;
 
 	struct kvm_regs regs = {
 		.rip = entry,
@@ -165,8 +165,7 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 			return -1;
 		}
 
-		printf("\n\nRESG\n");
-		dump_regs(vcpufd);
+		//dump_regs(vcpufd);
 		switch(run->exit_reason){
 			case KVM_EXIT_HLT:
 				printf("HLT\n");
@@ -185,26 +184,28 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 					return -1;
 				}
 
-				gaddr = translate(vcpufd, regs.rip);
+				if((gaddr = translate(vm, sregs.cr3, regs.rip, 0, 0)) == -1)
+					return 1;
 
 				if(!memcmp(guest2phys(vm, gaddr), "\x0f\x01\xc1", 3) \
 					|| !memcmp(guest2phys(vm, gaddr), "\x0f\x01\xd9", 3)){
 					if(sregs.cs.dpl != 0)
-						return 1;
+						return 2;
 
+					//printf("HYPERCALL\n");
 					kvm_handle_hypercall(vm, vcpu);
 					*(char*)guest2phys(vm, gaddr+2) = 0xd9;
 				}
 				else if(!memcmp(guest2phys(vm, gaddr), "\x0f\x05", 2)){
 					if(sregs.cs.dpl != 3)
-						return 1;
+						return 2;
 
+					//printf("SYSCALL\n");
 					kvm_handle_syscall(vm, vcpu);
 				}
 				break;
 			default:
-				printf("reason : %d\n", run->exit_reason);
-				getchar();
+				printf("exit_reason : %d\n", run->exit_reason);
 				return -1;
 		}
 		//dump_regs(vcpufd);
@@ -213,7 +214,7 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 	return 0;
 }
 
-static void set_long_mode(struct vm *vm, int vcpufd){
+static int set_long_mode(struct vm *vm, int vcpufd){
 	struct kvm_sregs sregs;
 	struct kvm_segment seg = {
 		.base = 0,
@@ -269,25 +270,6 @@ static void set_long_mode(struct vm *vm, int vcpufd){
 		perror("ioctl KVM_SET_SREGS");
 		return -1;
 	}
-}
 
-int load_image(struct vm *vm, int fd){
-	struct stat stbuf;
-	uint64_t addr;
-	size_t size;
-
-	if(fstat(fd, &stbuf) == -1){
-		perror("fstat");
-		return -1;
-	}
-
-	size = stbuf.st_size;
-	if((addr = gmalloc(0, (size + 0x1000-1) & ~0xfff)) == -1){
-		perror("gmalloc");
-		return -1;
-	}
-
-	read(fd, guest2phys(vm, addr), size);
-
-	return addr;
+	return 0;
 }

@@ -18,6 +18,7 @@ void dump_regs(int vcpufd){
 	r = ioctl(vcpufd, KVM_GET_REGS, &regs);
 	assert(r != -1);
 
+	DEBUG_PRINT("Dump regs\n");
 	DEBUG_PRINT("rax=%016llx rbx=%016llx rcx=%016llx rdx=%016llx\n",
 			regs.rax, regs.rbx, regs.rcx, regs.rdx);
 	DEBUG_PRINT("rsi=%016llx rdi=%016llx rsp=%016llx rbp=%016llx\n",
@@ -44,4 +45,5 @@ void dump_regs(int vcpufd){
 	DEBUG_PRINT("cr0=%016llx\n", sregs.cr0);
 	DEBUG_PRINT("cr2=%016llx\n", sregs.cr2);
 	DEBUG_PRINT("cr3=%016llx\n", sregs.cr3);
+	DEBUG_PRINT("\n\n");
 }
