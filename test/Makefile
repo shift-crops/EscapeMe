@@ -2,16 +2,21 @@ SRCS    := $(wildcard ./*.c)
 SHARED_TARGET   := $(SRCS:.c=-shared.elf)
 STATIC_TARGET   := $(SRCS:.c=-static.elf)
 
-CFLAGS  := -nostdlib -Wall
+CFLAGS	:= -nostdlib -Wall
+
+AS		:= nasm
 
 .PHONY: all
 all: $(SHARED_TARGET) $(STATIC_TARGET)
 
-%-shared.elf: %.c ../libc.so
-	$(CC) $(CFLAGS) $< -L.. -lc -o $@
+%-shared.elf: %.c start.o ../libc.so
+	$(CC) $(CFLAGS) start.o $< -L.. -lc -o $@
 
-%-static.elf: %.c ../libc.a
+%-static.elf: start.o %.c ../libc.a
 	$(CC) $(CFLAGS) $^ -o $@
+
+%.o: %.s
+	$(AS) -f elf64 $^ -o $@
 
 .PHONY: clean
 clean:

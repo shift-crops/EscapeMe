@@ -1,11 +1,12 @@
 SHARED_TARGET  := libc.so
 STATIC_TARGET  := libc.a
 
-SUB_OBJS := stdlib/stdlib.a io/io.a malloc/malloc.a string/string.a \
-			libio/libio.a assert/assert.a misc/misc.a
+SUB_OBJS := io/io.a libio/libio.a \
+			stdio/stdio.a stdlib/stdlib.a malloc/malloc.a string/string.a \
+			assert/assert.a misc/misc.a
 EXPORT   := export.map
 
-CFLAGS   := -Wall -fPIE -g3 -masm=intel
+CFLAGS   := -Wall -fPIE -g3 -masm=intel -fno-stack-protector
 LDFLAGS  := -shared -pie -nostdlib -E --version-script=$(EXPORT)
 
 .PHONY: all

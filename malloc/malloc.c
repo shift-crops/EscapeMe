@@ -299,6 +299,10 @@ static void _int_free(mstate av, mchunkptr p){
 	printf("_int_free(0x%0x) : %p\n", size, p);
 #endif
 
+	if(!PREV_INUSE(nextchunk)){
+		abort();
+	}
+
 	if(!PREV_INUSE(p)){
 		prevsize = PREV_SIZE(p);
 		size += prevsize;

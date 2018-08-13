@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int _start(void){
+int main(void){
 	char *buf1, *buf2;
 
 	puts("malloc 0x100");
@@ -18,12 +18,10 @@ int _start(void){
 	read(0, buf2, 128);
 	puts(buf2);
 
-	puts("malloc 0x100");
+	puts("free 0x100");
 	free(buf1);
 	puts("free 0x30000");
 	free(buf2);
-
-	exit(0);
 
 	return 0;
 }

@@ -23,5 +23,7 @@
 		strncat;
 		strchr;
 		strdup;
+		printf;
+		sprintf;
 	local: *;
 };
