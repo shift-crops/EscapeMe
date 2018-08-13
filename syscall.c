@@ -68,7 +68,7 @@ int sys_brk(uint64_t addr){
 	static uint64_t brk;
 
 	if(!brk)
-		brk = 0x604000;
+		brk = 0x605000;
 	asm("hlt");
 	if(!addr)
 		return brk;
@@ -86,6 +86,7 @@ int sys_brk(uint64_t addr){
 	return 0;
 }
 
+void hlt(void);
 void sys_exit(int status){
 	hlt();
 }

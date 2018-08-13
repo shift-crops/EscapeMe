@@ -18,7 +18,7 @@ void kernel_main(void){
 	if(prepare_user() < 0)
 		goto hlt;
 
-	switch_user(0x000040017c, 0x7ffffffff0);
+	switch_user(0x0000400180, 0x7ffffffff0);
 
 hlt:
 	asm("hlt");

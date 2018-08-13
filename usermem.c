@@ -40,16 +40,17 @@ int prepare_user(void){
 	pd[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pt_phys+0x2000);
 
 	// binary
-	if((page_phys = (uint64_t)hc_load_user(0, 0x1000*2)) == -1)
+	if((page_phys = (uint64_t)hc_load_user(0, 0x1000*3)) == -1)
 		return -1;
-	for(int i = 0; i < 2; i++)
+	for(int i = 0; i < 3; i++)
 		pt[i] = PDE64_PRESENT | PDE64_USER | (page_phys+0x1000*i);
 
 	// bss
 	pt += 512;
-	if((page_phys = (uint64_t)hc_malloc(0, 0x1000)) == -1)
+	if((page_phys = (uint64_t)hc_malloc(0, 0x1000*2)) == -1)
 		return -1;
-	pt[3] = PDE64_PRESENT | PDE64_RW | PDE64_USER | page_phys;
+	for(int i = 0; i < 2; i++)
+		pt[3+i] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (page_phys+0x1000*i);
 
 	// stack
 	pt += 512;
@@ -115,7 +116,12 @@ uint64_t mmap_user(uint64_t addr, size_t length){
 	for(int i = 0; i < pages; i++)
 		if(pt[idx[3]+i] & PDE64_PRESENT){
 			// sudeni aru yanke!w
-			ret= -1;
+			if(addr == map_bottom - length){
+				map_bottom -= (i+1)<<12;
+				ret= -2;
+			}
+			else
+				ret= -1;
 			goto end;
 		}
 	goto new_page;
@@ -142,16 +148,63 @@ new_page:
 	if(remain > 0)
 		if(mmap_user(addr+(pages<<12), remain<<12) < 0)
 			return -1;
-	ret = addr;
 
-end:
-	if(ret == -1 && addr == map_bottom - length){
+	if(addr == map_bottom - length)
 		map_bottom -= length;
+
+	ret = addr;
+end:
+	if(ret == -2)
 		ret = mmap_user(0, length);
-	}
 	return ret;
 }
 
 uint64_t munmap_user(uint64_t addr, size_t length){
+	uint16_t idx[]  = { (addr>>39) & 0x1ff, (addr>>30) & 0x1ff, (addr>>21) & 0x1ff, (addr>>12) & 0x1ff };
+	uint64_t pml4_phys, pdpt_phys, pd_phys, pt_phys;
+	uint64_t *pml4, *pdpt, *pd, *pt;
+
+	if(addr&0xfff || length&0xfff)
+		return -1;
+
+	uint16_t pages  = length>>12;
+	uint16_t remain = 0;
+	if(pages > 512-idx[3]){
+		remain = pages - (512-idx[3]);
+		pages = 512-idx[3];
+	}
+
+	asm volatile ("mov %0, cr3":"=r"(pml4_phys));
+	pml4 = (uint64_t*)(pml4_phys+STRAIGHT_BASE);
+	if(!(pml4[idx[0]] & PDE64_PRESENT) || !(pml4[idx[0]] & PDE64_USER))
+		return -1;
+
+	pdpt_phys = pml4[idx[0]] & ~0xfff;
+	pdpt = (uint64_t*)(pdpt_phys+STRAIGHT_BASE);
+	if(!(pdpt[idx[1]] & PDE64_PRESENT) || !(pdpt[idx[1]] & PDE64_USER))
+		return -1;
+
+	pd_phys = pdpt[idx[1]] & ~0xfff;
+	pd = (uint64_t*)(pd_phys+STRAIGHT_BASE);
+	if(!(pd[idx[2]] & PDE64_PRESENT) || !(pd[idx[2]] & PDE64_USER))
+		return -1;
+
+	pt_phys = pd[idx[2]] & ~0xfff;
+	pt = (uint64_t*)(pt_phys+STRAIGHT_BASE);
+	for(int i = 0; i < pages; i++)
+		if(!(pt[idx[3]+i] & PDE64_PRESENT) || !(pt[idx[3]+i] & PDE64_USER))
+			return -1;
+
+	for(int i = 0; i < pages; i++){
+		uint64_t page_phys = pt[idx[3]+i] & ~((1<<9)-1);
+		hc_free((void*)page_phys, 0x1000);
+
+		pt[idx[3]+i] = 0;
+	}
+
+	if(remain > 0)
+		if(munmap_user(addr+(pages<<12), remain<<12) < 0)
+			return -1;
+
 	return 0;
 }

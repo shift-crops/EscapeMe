@@ -38,6 +38,7 @@ hc_malloc:
 hc_free:
 	mov rax, 0x22
 	mov rbx, rdi
+	mov rcx, rsi
 	vmmcall
 	ret
 
