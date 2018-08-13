@@ -1,4 +1,4 @@
 #!/bin/sh
 
 # only "-static" elf run
-./kvm/kvm.elf kernel/kernel.bin libc/test/memory-static.elf
+./kvm/kvm.elf kernel/kernel.bin bin/memo-static.elf
