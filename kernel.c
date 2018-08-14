@@ -3,7 +3,7 @@
 #include "bits.h"
 #include "hypercall.h"
 #include "usermem.h"
-#include "misc.h"
+#include "switch.h"
 
 static void init_pagetable(void);
 static void init_gdt(void);

@@ -1,8 +1,7 @@
 #ifndef _MISC_H
 #define _MISC_H
 
-void set_handler(void* func);
-void switch_user(uint64_t rip, uint64_t rsp);
-void syscall_handler(void);
+void *memcpy(void *dest, const void *src, size_t n);
+void hlt(void) __attribute__((noreturn)) ;
 
 #endif

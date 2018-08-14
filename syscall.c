@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include "hypercall.h"
 #include "usermem.h"
+#include "misc.h"
 
 #define NR_read         0
 #define NR_write        1
@@ -86,7 +87,6 @@ int sys_brk(uint64_t addr){
 	return 0;
 }
 
-void hlt(void);
 void sys_exit(int status){
 	hlt();
 }
