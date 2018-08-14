@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/mman.h>
 #include "kernel.h"
 #include "bits.h"
 #include "hypercall.h"
@@ -62,7 +63,7 @@ int prepare_user(void){
 	return 0;
 }
 
-uint64_t mmap_user(uint64_t addr, size_t length){
+uint64_t mmap_user(uint64_t addr, size_t length, int prot){
 	uint64_t pml4_phys, pdpt_phys, pd_phys, pt_phys, page_phys;
 	uint64_t *pml4, *pdpt, *pd, *pt;
 	static uint64_t map_bottom;
@@ -143,10 +144,11 @@ new_page:
 	if((page_phys = (uint64_t)hc_malloc(0, pages<<12)) == -1)
 		return -1;
 	for(int i = 0; i < pages; i++)
-		pt[idx[3]+i] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (page_phys+(i<<12));
+		pt[idx[3]+i] = PDE64_PRESENT | (prot & PROT_WRITE ? PDE64_RW : 0) | \
+					   (prot & (PROT_READ | PROT_WRITE) ? PDE64_USER : 0) | (page_phys+(i<<12));
 
 	if(remain > 0)
-		if(mmap_user(addr+(pages<<12), remain<<12) < 0)
+		if(mmap_user(addr+(pages<<12), remain<<12, prot) < 0)
 			return -1;
 
 	if(addr == map_bottom - length)
@@ -155,8 +157,58 @@ new_page:
 	ret = addr;
 end:
 	if(ret == -2)
-		ret = mmap_user(0, length);
+		ret = mmap_user(0, length, prot);
 	return ret;
+}
+
+uint64_t mprotect_user(uint64_t addr, size_t length, int prot){
+	uint16_t idx[]  = { (addr>>39) & 0x1ff, (addr>>30) & 0x1ff, (addr>>21) & 0x1ff, (addr>>12) & 0x1ff };
+	uint64_t pml4_phys, pdpt_phys, pd_phys, pt_phys;
+	uint64_t *pml4, *pdpt, *pd, *pt;
+
+	if(addr&0xfff || length&0xfff)
+		return -1;
+
+	uint16_t pages  = length>>12;
+	uint16_t remain = 0;
+	if(pages > 512-idx[3]){
+		remain = pages - (512-idx[3]);
+		pages = 512-idx[3];
+	}
+
+	asm volatile ("mov %0, cr3":"=r"(pml4_phys));
+	pml4 = (uint64_t*)(pml4_phys+STRAIGHT_BASE);
+	if(!(pml4[idx[0]] & PDE64_PRESENT) || !(pml4[idx[0]] & PDE64_USER))
+		return -1;
+
+	pdpt_phys = pml4[idx[0]] & ~0xfff;
+	pdpt = (uint64_t*)(pdpt_phys+STRAIGHT_BASE);
+	if(!(pdpt[idx[1]] & PDE64_PRESENT) || !(pdpt[idx[1]] & PDE64_USER))
+		return -1;
+
+	pd_phys = pdpt[idx[1]] & ~0xfff;
+	pd = (uint64_t*)(pd_phys+STRAIGHT_BASE);
+	if(!(pd[idx[2]] & PDE64_PRESENT) || !(pd[idx[2]] & PDE64_USER))
+		return -1;
+
+	pt_phys = pd[idx[2]] & ~0xfff;
+	pt = (uint64_t*)(pt_phys+STRAIGHT_BASE);
+	for(int i = 0; i < pages; i++)
+		if(!(pt[idx[3]+i] & PDE64_PRESENT))
+			return -1;
+
+	for(int i = 0; i < pages; i++){
+		uint64_t page_phys = pt[idx[3]+i] & ~((1<<9)-1);
+
+		pt[idx[3]+i] = PDE64_PRESENT | (prot & PROT_WRITE ? PDE64_RW : 0) | \
+					   (prot & (PROT_READ | PROT_WRITE) ? PDE64_USER : 0) | page_phys;
+	}
+
+	if(remain > 0)
+		if(mprotect_user(addr+(pages<<12), remain<<12, prot) < 0)
+			return -1;
+
+	return 0;
 }
 
 uint64_t munmap_user(uint64_t addr, size_t length){
@@ -192,7 +244,7 @@ uint64_t munmap_user(uint64_t addr, size_t length){
 	pt_phys = pd[idx[2]] & ~0xfff;
 	pt = (uint64_t*)(pt_phys+STRAIGHT_BASE);
 	for(int i = 0; i < pages; i++)
-		if(!(pt[idx[3]+i] & PDE64_PRESENT) || !(pt[idx[3]+i] & PDE64_USER))
+		if(!(pt[idx[3]+i] & PDE64_PRESENT))
 			return -1;
 
 	for(int i = 0; i < pages; i++){
