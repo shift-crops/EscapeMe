@@ -1,5 +1,5 @@
-CSRCS := $(filter %.c,$(SRCS))
-SSRCS := $(filter %.s,$(SRCS))
+CSRCS := $(wildcard *.c)
+SSRCS := $(wildcard *.s)
 
 OBJS := $(CSRCS:.c=.o) $(SSRCS:.s=.o)
 DEPS := $(CSRCS:.c=.d)

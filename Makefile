@@ -6,7 +6,7 @@ SUB_OBJS := io/io.a libio/libio.a \
 			assert/assert.a misc/misc.a
 EXPORT   := export.map
 
-CFLAGS   := -Wall -fPIE -g3 -masm=intel -fno-stack-protector
+CFLAGS   := -Wall -masm=intel -fPIE -fno-stack-protector -g3
 LDFLAGS  := -shared -pie -nostdlib -E --version-script=$(EXPORT)
 
 .PHONY: all

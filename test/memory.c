@@ -2,8 +2,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+char *global = "Hello!";
+
 int main(void){
 	char *buf1, *buf2;
+
+	puts(global);
 
 	puts("malloc 0x100");
 	buf1 = malloc(0x100);
