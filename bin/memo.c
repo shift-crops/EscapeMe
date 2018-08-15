@@ -2,14 +2,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/mman.h>
 
 #define BUF_SIZE	128
 #define MEMO_SIZE	64
+#define MEMOS		0x10
 
 struct memo {
 	char *data;
 	int edited;
-} memo[0x10];
+} *memo;
 
 int menu(void);
 void alloc(void);
@@ -23,6 +25,7 @@ int getint(void);
 int main(void){
 	puts("==== secret memo service ====");
 
+	memo = mmap(0, 0x1000, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
 	for(;;){
 		switch(menu()){
 			case 1:
@@ -42,6 +45,7 @@ int main(void){
 	}
 
 end:
+	munmap(memo, 0x1000);
 	puts("Bye!");
 
 	return 0;
@@ -61,11 +65,11 @@ int menu(void){
 void alloc(void){
 	int id;
 
-	for(id = 0; id < sizeof(memo)/sizeof(struct memo); id++)
+	for(id = 0; id < MEMOS; id++)
 		if(!memo[id].data)
 			break;
 
-	if(id >= sizeof(memo)/sizeof(struct memo)){
+	if(id >= MEMOS){
 		puts("Entry is FULL...");
 		return;
 	}
@@ -108,7 +112,7 @@ int select_id(void){
 	printf("Input id > ");
 	id = getint();
 
-	if(id < 0 || id > sizeof(memo)/sizeof(struct memo)){
+	if(id < 0 || id > MEMOS){
 		puts("Invalid id...");
 		return -1;
 	}
