@@ -37,8 +37,8 @@
 struct gmalloc_chunk {
 	uint64_t addr;
 	size_t size;
-	struct gmalloc_chunk *fd, *bk;
-	struct gmalloc_chunk *next, *prev;
+	struct gmalloc_chunk *fd, *bk;		// free list
+	struct gmalloc_chunk *next, *prev;	// all chunks
 };
 typedef struct gmalloc_chunk *gmchunkptr, *gmbinptr;
 

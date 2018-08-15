@@ -54,8 +54,11 @@ uint64_t translate(struct vm *vm, uint64_t pml4_addr, uint64_t laddr, int write,
 	if(!CHK_PERMISSION(pd[idx[2]]))
 		goto end;
 	if(pd[idx[2]] & PDE64_PS){
+		if(user)	// user does not support hugepage
+			goto end;
+
 		paddr = pt_addr | (laddr&0x1fffff);
-		goto end;
+		goto end;	// vuln
 	}
 
 	uint64_t *pt 	= guest2phys(vm, pt_addr);
@@ -63,6 +66,7 @@ uint64_t translate(struct vm *vm, uint64_t pml4_addr, uint64_t laddr, int write,
 		goto end;
 
 	paddr = (pt[idx[3]] & ~0xfff) | (laddr&0xfff);
+	assert_addr(vm, paddr);
 end:
 	//printf("laddr:%p -> paddr:%p\n", laddr, paddr);
 	return paddr;

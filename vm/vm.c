@@ -216,8 +216,8 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 				}
 				break;
 			default:
-#ifdef DEBUG
 				printf("exit_reason : %d\n", run->exit_reason);
+#ifdef DEBUG
 				getchar();
 #endif
 				return -1;
