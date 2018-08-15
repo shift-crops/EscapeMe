@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <linux/kvm.h>
 #include "vm/vm.h"
@@ -54,13 +55,14 @@ int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu){
 		case 0x21:		// gmalloc(phys_addr, size=0)
 			if((ret = gmalloc(arg[0], arg[1])) != -1)
 				assert_addr(vm, ret);
+			memset(guest2phys(vm, ret), 0, arg[1]);
 			break;
 		case 0x22:		// gfree(phys_addr);
 			if(check_addr(vm, arg[0]))
 				ret = gfree(arg[0]);
 			break;
-		case 0x30:		// load_module(1, phys_addr=0, size=0)
-			ret = load_module(vm, 1, arg[0], arg[1]);
+		case 0x30:		// load_module(1, phys_addr=0, offset=0, size=0)
+			ret = load_module(vm, 1, arg[0], arg[1], arg[2]);
 			break;
 	}
 #ifdef DEBUG

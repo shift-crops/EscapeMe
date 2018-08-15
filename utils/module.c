@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -25,9 +26,10 @@ int init_modules(unsigned nmod, char *list[]){
 	return 0;
 }
 
-int load_module(struct vm *vm, int id, uint64_t addr, size_t size){
+int load_module(struct vm *vm, int id, uint64_t addr, off_t offset, size_t size){
 	int nmod;
 	int fd;
+	size_t aligned_size;
 
 	if(!mod_list)
 		return -1;
@@ -51,18 +53,25 @@ int load_module(struct vm *vm, int id, uint64_t addr, size_t size){
 		size = stbuf.st_size;
 	}
 
-	if((addr = gmalloc(addr, (size + 0x1000-1) & ~0xfff)) == -1){
+	if((addr = gmalloc(addr, aligned_size = (size + 0x1000-1) & ~0xfff)) == -1){
 		perror("gmalloc");
 		return -1;
 	}
+	memset(guest2phys(vm, addr), 0, aligned_size);
 
-	read(fd, guest2phys(vm, addr), size);
-	close(fd);
-	mod_list->fds[id] = -1;
+	if(lseek(fd, offset, SEEK_SET) == -1){
+		perror("lseek");
+		return -1;
+	}
+
+	if(read(fd, guest2phys(vm, addr), size) == -1){
+		perror("read");
+		return -1;
+	}
 
 	return addr;
 }
 
 int load_kernel(struct vm *vm){
-	return load_module(vm, 0, 0, 0);
+	return load_module(vm, 0, 0, 0, 0);
 }
