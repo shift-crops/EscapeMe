@@ -16,6 +16,8 @@
 
 #define NR_exit         60
 
+#define NR_getflag      4296
+
 ssize_t sys_read(int fd, uint64_t buf, size_t count);
 ssize_t sys_write(int fd, uint64_t buf, size_t count);
 uint64_t sys_mmap(uint64_t addr, size_t length, int prot, int flags, int fd, off_t offset);
@@ -23,6 +25,7 @@ uint64_t sys_mprotect(uint64_t addr, size_t length, int prot);
 int sys_munmap(uint64_t addr, size_t length);
 int sys_brk(uint64_t addr);
 void sys_exit(int status);
+uint64_t sys_getflag(void);
 
 uint64_t syscall(uint64_t nr, uint64_t argv[]){
 	uint64_t ret = -1;
@@ -48,6 +51,9 @@ uint64_t syscall(uint64_t nr, uint64_t argv[]){
 			break;
 		case NR_exit:
 			sys_exit(argv[0]);
+			break;
+		case NR_getflag:
+			ret = sys_getflag();
 			break;
 	}
 
@@ -98,4 +104,15 @@ int sys_brk(uint64_t addr){
 
 void sys_exit(int status){
 	hlt();
+}
+
+uint64_t sys_getflag(void){
+	uint64_t addr;
+	char flag[] = "Here is first flag : TWCTF{}";
+
+	addr = mmap_user(0, 0x1000, PROT_WRITE);
+	copy_to_user(addr, flag, sizeof(flag));
+	mprotect_user(addr, 0x1000, PROT_NONE);
+
+	return addr;
 }
