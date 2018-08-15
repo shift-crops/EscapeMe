@@ -2,9 +2,9 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <sys/mman.h>
-#include "hypercall.h"
-#include "usermem.h"
-#include "misc.h"
+#include "service/hypercall.h"
+#include "memory/usermem.h"
+#include "utils/misc.h"
 
 #define NR_read         0
 #define NR_write        1

@@ -1,5 +1,5 @@
-#ifndef _KERNEL_H
-#define _KERNEL_H
+#ifndef _MEMORY_H
+#define _MEMORY_H
 
 #define STRAIGHT_BASE	0x8040000000
 

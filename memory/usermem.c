@@ -1,9 +1,9 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/mman.h>
-#include "kernel.h"
 #include "bits.h"
-#include "hypercall.h"
+#include "memory/memory.h"
+#include "service/hypercall.h"
 
 /*
 0x0000000000 ~ 0x7fffffffff : User

@@ -2,8 +2,8 @@
 #define _USERMEM_H
 
 #include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
-#include "misc.h"
 
 #define copy_to_user(dst, src, size)   (((dst) < (1UL<<39)-1) ? (uint64_t)memcpy((void*)dst, src, size) : -1)
 #define copy_from_user(dst, src, size) (((src) < (1UL<<39)-1) ? memcpy(dst, (void*)src, size) : (void*)-1)
