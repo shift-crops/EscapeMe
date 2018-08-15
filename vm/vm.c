@@ -173,8 +173,10 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 #ifdef DEBUG
 				printf("HLT\n");
 				getchar();
-#endif
+				break;
+#else
 				return 0;
+#endif
 			case KVM_EXIT_IO:
 #ifdef DEBUG
 				printf("IO\n");
