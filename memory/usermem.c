@@ -3,6 +3,7 @@
 #include <sys/mman.h>
 #include "bits.h"
 #include "memory/memory.h"
+#include "memory/usermem.h"
 #include "service/hypercall.h"
 
 /*
@@ -40,21 +41,8 @@ int prepare_user(void){
 	pd += 512;
 	pd[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pt_phys+0x2000);
 
-	// binary
-	if((page_phys = (uint64_t)hc_load_user(0, 0x1000*3)) == -1)
-		return -1;
-	for(int i = 0; i < 3; i++)
-		pt[i] = PDE64_PRESENT | PDE64_USER | (page_phys+0x1000*i);
-
-	// bss
-	pt += 512;
-	if((page_phys = (uint64_t)hc_malloc(0, 0x1000*2)) == -1)
-		return -1;
-	for(int i = 0; i < 2; i++)
-		pt[3+i] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (page_phys+0x1000*i);
-
 	// stack
-	pt += 512;
+	pt += 1024;
 	if((page_phys = (uint64_t)hc_malloc(0, 0x1000*4)) == -1)
 		return -1;
 	for(int i = 512-4; i < 512; i++)
@@ -63,21 +51,35 @@ int prepare_user(void){
 	return 0;
 }
 
-uint64_t mmap_user(uint64_t addr, size_t length, int prot){
-	uint64_t pml4_phys, pdpt_phys, pd_phys, pt_phys, page_phys;
+uint64_t mmap_user(uint64_t vaddr, size_t length, int prot){
+	uint64_t page_phys;
+	uint16_t pages  = length>>12;
+
+	uint64_t ret = -1;
+
+	if((page_phys = (uint64_t)hc_malloc(0, pages<<12)) == -1)
+		return -1;
+	if((ret = mmap_in_user(vaddr, page_phys, length, prot)) == -1)
+		hc_free((void*)page_phys, pages<<12);
+
+	return ret;
+}
+
+uint64_t mmap_in_user(uint64_t vaddr, uint64_t paddr, size_t length, int prot){
+	uint64_t pml4_phys, pdpt_phys, pd_phys, pt_phys;
 	uint64_t *pml4, *pdpt, *pd, *pt;
 	static uint64_t map_bottom;
 
-	if(addr&0xfff || length&0xfff)
+	if(vaddr&0xfff || paddr&0xfff || length&0xfff)
 		return -1;
 
 	if(!map_bottom)
 		map_bottom = 0x7fff200000;
 
-	if(!addr)
-		addr = map_bottom - length;
+	if(!vaddr)
+		vaddr = map_bottom - length;
 
-	uint16_t idx[]  = { (addr>>39) & 0x1ff, (addr>>30) & 0x1ff, (addr>>21) & 0x1ff, (addr>>12) & 0x1ff };
+	uint16_t idx[]  = { (vaddr>>39) & 0x1ff, (vaddr>>30) & 0x1ff, (vaddr>>21) & 0x1ff, (vaddr>>12) & 0x1ff };
 	uint64_t ret = -1;
 
 	uint16_t pages  = length>>12;
@@ -117,7 +119,7 @@ uint64_t mmap_user(uint64_t addr, size_t length, int prot){
 	for(int i = 0; i < pages; i++)
 		if(pt[idx[3]+i] & PDE64_PRESENT){
 			// sudeni aru yanke!w
-			if(addr == map_bottom - length){
+			if(vaddr == map_bottom - length){
 				map_bottom -= (i+1)<<12;
 				ret= -2;
 			}
@@ -141,32 +143,30 @@ new_pt:
 	pd[idx[2]] = PDE64_PRESENT | PDE64_RW | PDE64_USER | pt_phys;
 
 new_page:
-	if((page_phys = (uint64_t)hc_malloc(0, pages<<12)) == -1)
-		return -1;
 	for(int i = 0; i < pages; i++)
 		pt[idx[3]+i] = PDE64_PRESENT | (prot & PROT_WRITE ? PDE64_RW : 0) | \
-					   (prot & (PROT_READ | PROT_WRITE) ? PDE64_USER : 0) | (page_phys+(i<<12));
+					   (prot & (PROT_READ | PROT_WRITE) ? PDE64_USER : 0) | (paddr+(i<<12));
 
 	if(remain > 0)
-		if(mmap_user(addr+(pages<<12), remain<<12, prot) < 0)
+		if(mmap_in_user(vaddr+(pages<<12), paddr+(pages<<12), remain<<12, prot) < 0)
 			return -1;
 
-	if(addr == map_bottom - length)
+	if(vaddr == map_bottom - length)
 		map_bottom -= length;
 
-	ret = addr;
+	ret = vaddr;
 end:
 	if(ret == -2)
-		ret = mmap_user(0, length, prot);
+		ret = mmap_in_user(0, paddr, length, prot);
 	return ret;
 }
 
-uint64_t mprotect_user(uint64_t addr, size_t length, int prot){
-	uint16_t idx[]  = { (addr>>39) & 0x1ff, (addr>>30) & 0x1ff, (addr>>21) & 0x1ff, (addr>>12) & 0x1ff };
+uint64_t mprotect_user(uint64_t vaddr, size_t length, int prot){
+	uint16_t idx[]  = { (vaddr>>39) & 0x1ff, (vaddr>>30) & 0x1ff, (vaddr>>21) & 0x1ff, (vaddr>>12) & 0x1ff };
 	uint64_t pml4_phys, pdpt_phys, pd_phys, pt_phys;
 	uint64_t *pml4, *pdpt, *pd, *pt;
 
-	if(addr&0xfff || length&0xfff)
+	if(vaddr&0xfff || length&0xfff)
 		return -1;
 
 	uint16_t pages  = length>>12;
@@ -205,18 +205,18 @@ uint64_t mprotect_user(uint64_t addr, size_t length, int prot){
 	}
 
 	if(remain > 0)
-		if(mprotect_user(addr+(pages<<12), remain<<12, prot) < 0)
+		if(mprotect_user(vaddr+(pages<<12), remain<<12, prot) < 0)
 			return -1;
 
 	return 0;
 }
 
-uint64_t munmap_user(uint64_t addr, size_t length){
-	uint16_t idx[]  = { (addr>>39) & 0x1ff, (addr>>30) & 0x1ff, (addr>>21) & 0x1ff, (addr>>12) & 0x1ff };
+uint64_t munmap_user(uint64_t vaddr, size_t length){
+	uint16_t idx[]  = { (vaddr>>39) & 0x1ff, (vaddr>>30) & 0x1ff, (vaddr>>21) & 0x1ff, (vaddr>>12) & 0x1ff };
 	uint64_t pml4_phys, pdpt_phys, pd_phys, pt_phys;
 	uint64_t *pml4, *pdpt, *pd, *pt;
 
-	if(addr&0xfff || length&0xfff)
+	if(vaddr&0xfff || length&0xfff)
 		return -1;
 
 	uint16_t pages  = length>>12;
@@ -255,7 +255,7 @@ uint64_t munmap_user(uint64_t addr, size_t length){
 	}
 
 	if(remain > 0)
-		if(munmap_user(addr+(pages<<12), remain<<12) < 0)
+		if(munmap_user(vaddr+(pages<<12), remain<<12) < 0)
 			return -1;
 
 	return 0;

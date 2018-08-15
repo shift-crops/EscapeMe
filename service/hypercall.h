@@ -9,6 +9,6 @@ unsigned int hc_mem_total(void);
 void *hc_malloc(void *addr, unsigned long size);
 int hc_free(void *addr, unsigned long size);
 
-void *hc_load_user(void *addr, unsigned long size);
+void *hc_load_module(void *addr, unsigned long offset, unsigned long size);
 
 #endif

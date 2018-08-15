@@ -79,7 +79,7 @@ int sys_brk(uint64_t addr){
 
 	if(!brk)
 		brk = 0x605000;
-	asm("hlt");
+
 	if(!addr)
 		return brk;
 

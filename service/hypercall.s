@@ -1,6 +1,6 @@
 global hc_read, hc_write
 global hc_mem_inuse, hc_mem_total, hc_malloc, hc_free
-global hc_load_user
+global hc_load_module
 
 hc_read:
 	mov rax, 0x10
@@ -42,7 +42,7 @@ hc_free:
 	vmmcall
 	ret
 
-hc_load_user:
+hc_load_module:
 	mov rax, 0x30
 	mov rbx, rdi
 	mov rcx, rsi

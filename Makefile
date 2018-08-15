@@ -7,7 +7,7 @@ SSRCS	:= $(filter %.s,$(SRCS))
 
 OBJS	:= $(SSRCS:.s=.o) $(CSRCS:.c=.o)
 DEPS	:= $(CSRCS:.c=.d)
-SUB_OBJS := memory/memory.a service/service.a utils/utils.a
+SUB_OBJS := memory/memory.a service/service.a elf/elf.a utils/utils.a
 
 CFLAGS	:= -Wall -I.. -masm=intel -fno-stack-protector -fPIE
 LDFLAGS	:= -nostdlib -Ttext 0x0
