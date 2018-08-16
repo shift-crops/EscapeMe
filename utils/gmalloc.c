@@ -61,7 +61,7 @@ void init_gmem_manage(size_t mem_size){
 	gmstate av = &arena;
 	gmchunkptr top;
 
-	top = (gmchunkptr)malloc(sizeof(struct gmalloc_chunk));
+	top = (gmchunkptr)calloc(1, sizeof(struct gmalloc_chunk));
 	top->addr = 0;
 	top->size = mem_size;
 	top->fd   = top->bk   = NULL;
@@ -239,7 +239,11 @@ static void _int_gfree(gmstate av, gmchunkptr p){
 	next = p->next;
 	prev = p->prev;
 
-	if(!INUSE(prev)){
+	if(CHUNK_MEM(p))
+		assert(prev);
+	assert(next);
+
+	if(prev && !INUSE(prev)){
 		unlink_freelist(prev);
 
 		prev->next = next;
@@ -343,7 +347,7 @@ static void _alloc_split(gmstate av, gmchunkptr p, size_t nb){
 	if(!remainder_size)
 		return;
 
-	remainder = (gmchunkptr)malloc(sizeof(struct gmalloc_chunk));
+	remainder = (gmchunkptr)calloc(1, sizeof(struct gmalloc_chunk));
 	CHUNK_MEM(remainder)  = CHUNK_MEM(p) + nb;
 	CHUNK_SIZE(remainder) = remainder_size;
 	remainder->next = p->next;

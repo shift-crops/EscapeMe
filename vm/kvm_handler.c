@@ -61,8 +61,8 @@ int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu){
 			if(check_addr(vm, arg[0]))
 				ret = gfree(arg[0]);
 			break;
-		case 0x30:		// load_module(1, phys_addr=0, offset=0, size=0)
-			ret = load_module(vm, 1, arg[0], arg[1], arg[2]);
+		case 0x30:		// load_module(id, phys_addr=0, offset=0, size=0)
+			ret = load_module(vm, arg[0], arg[1], arg[2], arg[3]);
 			break;
 	}
 #ifdef DEBUG

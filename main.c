@@ -4,7 +4,7 @@
 #include "vm/vm.h"
 #include "utils/module.h"
 
-#define GUEST_MEMSIZE	0x800000
+#define GUEST_MEMSIZE	0x400000
 
 __attribute__((constructor))
 void init(void){
