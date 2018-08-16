@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-char *itoa(int value, char *str);
+char *itoa(int value, char *str, int radix);
 
 int printf(const char *fmt, ...){
 	int n, mod = 0;
@@ -16,17 +16,20 @@ int printf(const char *fmt, ...){
 	va_copy(ap2, ap);
 	for(p = fmt; (p = strchr(p, '%')); p += 2){
 		register unsigned long arg;
-		int v;
+		long v;
 
 		arg = va_arg(ap, unsigned long);
 		switch(*(p+1)){
+			case 'p':
+				n += 2;
 			case 'd':
+			case 'x':
 				v = arg;
 				if(v < 0){
 					n++;
 					v = -v;
 				}
-				for(n++; v; n++, v /= 10);
+				for(n++; v; n++, v /= (*(p+1)=='d'? 10:16));
 				goto next;
 			case 's':
 				n += strlen((char*)arg);
@@ -53,8 +56,11 @@ next:
 
 			arg = va_arg(ap2, unsigned long);
 			switch(*(p+1)){
+				case 'p':
+					strncat(buf, "0x", 2);
 				case 'd':
-					itoa(arg, buf + strlen(buf));
+				case 'x':
+					itoa(arg, buf + strlen(buf), (*(p+1)=='d'? 10:16));
 					break;
 				case 's':
 					strncat(buf, (char*)arg, n+1 - strlen(buf));
@@ -91,8 +97,11 @@ int sprintf(char *buf, char *fmt, ...){
 			
 		arg = va_arg(ap, unsigned long);
 		switch(*(p+1)){
+			case 'p':
+				strncat(buf, "0x", 2);
 			case 'd':
-				itoa(arg, buf + strlen(buf));
+			case 'x':
+				itoa(arg, buf + strlen(buf), (*(p+1)=='d'? 10:16));
 				break;
 			case 's':
 				strcat(buf, (char*)arg);

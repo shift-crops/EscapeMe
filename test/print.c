@@ -5,11 +5,12 @@
 int main(void){
 	char *buf1, *buf2;
 
-	printf("Input string...");
 
 	buf1 = malloc(128);
 	buf2 = malloc(128);
+	printf("buf1 : %p, buf2 : %p\n", buf1, buf2);
 
+	printf("Input string...");
 	read(0, buf1, 128);
 
 	sprintf(buf2, "input : %s\natoi : %d\n", buf1, atoi(buf1));
