@@ -81,11 +81,6 @@ int sys_munmap(uint64_t addr, size_t length){
 }
 
 int sys_brk(uint64_t addr){
-	static uint64_t brk;
-
-	if(!brk)
-		brk = 0x605000;
-
 	if(!addr)
 		return brk;
 

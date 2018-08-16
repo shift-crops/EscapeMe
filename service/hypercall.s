@@ -44,7 +44,8 @@ hc_free:
 
 hc_load_module:
 	mov rax, 0x30
-	mov rbx, rdi
-	mov rcx, rsi
+	mov rbx, 1
+	mov rcx, rdi
+	xchg rdx, rsi
 	vmmcall
 	ret

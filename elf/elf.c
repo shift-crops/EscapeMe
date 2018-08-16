@@ -34,8 +34,12 @@ uint64_t load_elf(void){
 			goto end;
 
 		uint16_t flags = phdr->p_flags;
-		mmap_in_user(phdr->p_vaddr, entry_phys, (phdr->p_memsz + 0x1000-1) & ~0xfff, \
+		uint64_t memsz = (phdr->p_memsz + 0x1000-1) & ~0xfff;
+		mmap_in_user(phdr->p_vaddr, entry_phys, memsz, \
 				(flags & PF_R ? PROT_READ : 0) | (flags & PF_W ? PROT_WRITE : 0) | (flags & PF_X ? PROT_EXEC : 0));
+
+		if(phdr->p_vaddr + memsz > brk)
+			brk = phdr->p_vaddr + memsz;
 	}
 
 	ret = ehdr->e_entry;

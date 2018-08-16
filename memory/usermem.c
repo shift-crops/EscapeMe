@@ -26,23 +26,17 @@ int prepare_user(void){
 	pdpt = (uint64_t*)(pdpt_phys+STRAIGHT_BASE);
 	pml4[0] = PDE64_PRESENT | PDE64_RW | PDE64_USER | pdpt_phys;
 
-	if((pd_phys = (uint64_t)hc_malloc(0, 0x1000*2)) == -1)
+	if((pd_phys = (uint64_t)hc_malloc(0, 0x1000)) == -1)
 		return -1;
 	pd = (uint64_t*)(pd_phys+STRAIGHT_BASE);
-	pdpt[0] = PDE64_PRESENT | PDE64_RW | PDE64_USER | pd_phys;
-	pdpt[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pd_phys+0x1000);
+	pdpt[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | pd_phys;
 
-	if((pt_phys = (uint64_t)hc_malloc(0, 0x1000*3)) == -1)
+	if((pt_phys = (uint64_t)hc_malloc(0, 0x1000)) == -1)
 		return -1;
 	pt = (uint64_t*)(pt_phys+STRAIGHT_BASE);
-	pd[2] = PDE64_PRESENT | PDE64_USER | pt_phys;
-	pd[3] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pt_phys+0x1000);
-
-	pd += 512;
-	pd[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pt_phys+0x2000);
+	pd[511] = PDE64_PRESENT | PDE64_RW | PDE64_USER | pt_phys;
 
 	// stack
-	pt += 1024;
 	if((page_phys = (uint64_t)hc_malloc(0, 0x1000*4)) == -1)
 		return -1;
 	for(int i = 512-4; i < 512; i++)
