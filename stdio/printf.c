@@ -5,10 +5,15 @@
 
 char *itoa(int value, char *str, int radix);
 
+char *printf_buf;
+
 int printf(const char *fmt, ...){
 	int n, mod = 0;
 	va_list ap, ap2;
 	const char *p;
+
+	if(!printf_buf)
+		printf_buf = (char*)malloc(0x1000);
 
 	n = strlen(fmt);
 
@@ -43,12 +48,14 @@ next:
 	va_end(ap);
 
 	if(mod > 0){
-		char *buf = calloc(n+1, 1);
+		char *buf = n+1 < 0x1000 ? printf_buf : malloc(n+1);
+
 		if(!buf){
 			n = -1;
 			goto end;
 		}
 
+		buf[0] = '\x0';
 		while((p = strchr(fmt, '%'))){
 			register unsigned long arg;
 
@@ -73,7 +80,9 @@ next:
 
 		strncat(buf, fmt, n+1 - strlen(buf));
 		write(1, buf, strlen(buf));
-		free(buf);
+
+		if(buf != printf_buf)
+			free(buf);
 	}
 	else
 		write(1, fmt, n);

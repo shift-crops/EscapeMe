@@ -643,8 +643,8 @@ static void unlink_freelist(mchunkptr p){
 #endif
 	assert(fwd->bk == p && bck->fd == p);
 	
-	fwd->bk = bck;
 	bck->fd = fwd;
+	fwd->bk = bck;
 
 	if(!IN_SMALLBIN_RANGE(CHUNK_SIZE_NOMASK(p)) && p->fd_nextsize){
 		mchunkptr fwd_ns, bck_ns;
