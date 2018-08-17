@@ -5,7 +5,7 @@
 #include <sys/mman.h>
 
 #define BUF_SIZE	128
-#define MEMO_SIZE	64
+#define MEMO_SIZE	0x28
 #define MEMOS		0x10
 
 struct memo {
