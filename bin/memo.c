@@ -5,7 +5,7 @@
 #include <sys/mman.h>
 
 #define BUF_SIZE	128
-#define MEMO_SIZE	64
+#define MEMO_SIZE	0x28
 #define MEMOS		0x10
 
 struct memo {
@@ -63,7 +63,7 @@ int menu(void){
 }
 
 void alloc(void){
-	int id;
+	int id, n;
 
 	for(id = 0; id < MEMOS; id++)
 		if(!memo[id].data)
@@ -76,7 +76,11 @@ void alloc(void){
 
 	memo[id].data = (char*)calloc(MEMO_SIZE, 1);
 	memo[id].edited = 0;
-	puts("Entry added!!");
+
+	printf("Input memo > ");
+	n = read(0, memo[id].data, MEMO_SIZE);
+
+	printf("Added id:%d entry (%d bytes)\n", id, n);
 }
 
 void edit(void){
@@ -91,7 +95,7 @@ void edit(void){
 	}
 
 	printf("Input memo > ");
-	n = read(0, memo[id].data, MEMO_SIZE);
+	n = read(0, memo[id].data, strlen(memo[id].data));
 	memo[id].edited = 1;
 
 	printf("Edited id:%d entry (%d bytes)\n", id, n);
@@ -103,6 +107,8 @@ void delete(void){
 		return;
 
 	free(memo[id].data);
+	memo[id].data = NULL;
+
 	printf("Deleted id:%d entry\n", id);
 }
 
