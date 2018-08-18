@@ -1,11 +1,9 @@
 # EscapeMe
 
-----
 ## environment
 
 Ubuntu 18.04
 
-----
 ## usage
 
 Build
@@ -17,7 +15,6 @@ Run
     $ cd release
     $ ./run.sh
 
-----
 ## attachement
 - run.sh
 - kvm.elf

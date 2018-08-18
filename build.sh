@@ -9,3 +9,4 @@ make -C bin
 make -C exploit
 
 cp -n kvm/kvm.elf kernel/kernel.bin bin/memo-static.elf release
+strip release/kvm.elf
