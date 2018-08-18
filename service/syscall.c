@@ -6,6 +6,8 @@
 #include "memory/usermem.h"
 #include "utils/misc.h"
 
+#define FLAG1			"XXXXX{11111111111111111111111111111111}"
+
 #define NR_read         0
 #define NR_write        1
 
@@ -103,7 +105,7 @@ void sys_exit(int status){
 
 uint64_t sys_getflag(void){
 	uint64_t addr;
-	char flag[] = "Here is first flag : TWCTF{}";
+	char flag[] = "Here is first flag : "FLAG1;
 
 	addr = mmap_user(0, 0x1000, PROT_WRITE);
 	copy_to_user(addr, flag, sizeof(flag));
