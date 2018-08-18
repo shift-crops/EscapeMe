@@ -3,13 +3,12 @@ SHARED_TARGET   := $(SRCS:.c=-shared.elf)
 STATIC_TARGET   := $(SRCS:.c=-static.elf)
 
 CFLAGS  := -Wall -fno-stack-protector -fno-PIE
-LDFLAGS := -nostdlib
+LDFLAGS := -nostdlib -no-pie
 
 AS		:= nasm
 
 .PHONY: all
-#all: $(SHARED_TARGET) $(STATIC_TARGET)
-all: $(STATIC_TARGET)
+all: $(SHARED_TARGET) $(STATIC_TARGET)
 
 %-shared.elf: %.c start.o ../libc/libc.so
 	$(CC) $(CFLAGS) $(LDFLAGS) start.o $< -L../libc -lc -o $@
