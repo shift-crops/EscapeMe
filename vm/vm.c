@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <string.h>
-#include <seccomp.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <linux/kvm.h>
@@ -18,8 +17,6 @@
 
 static int init_vcpu(int fd, struct vm *vm);
 static int init_memory(struct vm *vm);
-static int set_seccomp(void);
-
 static int set_long_mode(struct vm *vm, int vcpufd);
 
 struct vm *init_vm(unsigned ncpu, size_t mem_size){
@@ -55,7 +52,6 @@ struct vm *init_vm(unsigned ncpu, size_t mem_size){
 	}
 
 end:
-	set_seccomp();
 	close(fd);
 	return vm;
 }
@@ -123,26 +119,6 @@ static int init_memory(struct vm *vm){
 error:
 	munmap(mem, mem_size);
 	return -1;
-}
-
-static int set_seccomp(void){
-	int rc = -1;
-	scmp_filter_ctx ctx;
-
-	if(!(ctx = seccomp_init(SCMP_ACT_ALLOW)))
-		goto out;
-
-	if((rc = seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(ioctl), 1, SCMP_A1(SCMP_CMP_EQ, KVM_CREATE_VM))) < 0)
-		goto out;
-	if((rc = seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(ioctl), 1, SCMP_A1(SCMP_CMP_EQ, KVM_CREATE_VCPU))) < 0)
-		goto out;
-
-	if((rc = seccomp_load(ctx)) < 0)
-		goto out;
-
-out:
-	seccomp_release(ctx);
-	return rc;
 }
 
 int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
