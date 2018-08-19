@@ -15,7 +15,6 @@ struct vcpu {
 };
 
 struct vm {
-	int fd;
 	int vmfd;
 
 	size_t mem_size;

@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <string.h>
+#include <seccomp.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <linux/kvm.h>
@@ -15,56 +16,55 @@
 #include "utils/translate.h"
 #include "utils/debug.h"
 
-static int init_vcpu(struct vm *vm);
+static int init_vcpu(int fd, struct vm *vm);
 static int init_memory(struct vm *vm);
+static int set_seccomp(void);
+
 static int set_long_mode(struct vm *vm, int vcpufd);
 
 struct vm *init_vm(unsigned ncpu, size_t mem_size){
-	struct vm *vm;
+	struct vm *vm = NULL;
 	int fd, vmfd;
 
 	if(ncpu < 1 || ncpu > 4)
 		return NULL;
 
-	if((fd = open("/dev/kvm", O_RDWR)) < 0){
+	if((fd = open("/dev/kvm", O_RDONLY)) < 0){
 		perror("open /dev/kvm");
-		return NULL;
+		goto end;
 	}
 
 	if((vmfd = ioctl(fd, KVM_CREATE_VM, 0)) < 0){
 		perror("ioctl KVM_CREATE_VM");
-		return NULL;
+		goto end;
 	}
 
 	if(!(vm = (struct vm*)calloc(sizeof(struct vm)+sizeof(struct vcpu)*ncpu, 1))){
 		perror("malloc (struct vm)");
-		return NULL;
+		goto end;
 	}
 
-	vm->fd 			= fd;
 	vm->vmfd 		= vmfd;
 	vm->ncpu 		= ncpu;
 	vm->mem_size 	= mem_size;
 	init_gmem_manage(mem_size);
 
-	if(init_vcpu(vm) < ncpu)
-		goto error;
+	if(init_vcpu(fd, vm) < ncpu || init_memory(vm) < 0){
+		free(vm);
+		vm = NULL;
+	}
 
-	if(init_memory(vm) < 0)
-		goto error;
-
+end:
+	set_seccomp();
+	close(fd);
 	return vm;
-
-error:
-	free(vm);
-	return NULL;
 }
 
-static int init_vcpu(struct vm *vm){
+static int init_vcpu(int fd, struct vm *vm){
 	size_t mmap_size;
 	int i;
 
-	if((mmap_size = ioctl(vm->fd, KVM_GET_VCPU_MMAP_SIZE, NULL)) <= 0){
+	if((mmap_size = ioctl(fd, KVM_GET_VCPU_MMAP_SIZE, NULL)) <= 0){
 		perror("ioctl KVM_GET_VCPU_MMAP_SIZE");
 		return -1;
 	}
@@ -123,6 +123,26 @@ static int init_memory(struct vm *vm){
 error:
 	munmap(mem, mem_size);
 	return -1;
+}
+
+static int set_seccomp(void){
+	int rc = -1;
+	scmp_filter_ctx ctx;
+
+	if(!(ctx = seccomp_init(SCMP_ACT_ALLOW)))
+		goto out;
+
+	if((rc = seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(ioctl), 1, SCMP_A1(SCMP_CMP_EQ, KVM_CREATE_VM))) < 0)
+		goto out;
+	if((rc = seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(ioctl), 1, SCMP_A1(SCMP_CMP_EQ, KVM_CREATE_VCPU))) < 0)
+		goto out;
+
+	if((rc = seccomp_load(ctx)) < 0)
+		goto out;
+
+out:
+	seccomp_release(ctx);
+	return rc;
 }
 
 int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){

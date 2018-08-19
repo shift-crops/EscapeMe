@@ -10,7 +10,7 @@ CFLAGS   := -Wall -Wl,-z,relro,-z,now -fstack-protector -I..
 all: $(TARGET)
 
 $(TARGET): $(OBJS) $(SUB_OBJS)
-	$(CC) $(LDFLAGS) $^ -o $@
+	$(CC) $^ -lseccomp -o $@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -MMD -MP $<
