@@ -83,12 +83,16 @@ uint64_t gmalloc(uint64_t addr, size_t bytes){
 	gmstate av = &arena;
 	gmchunkptr p;
 
-	if(!av->initialized || bytes > av->system_mem - av->inuse)
+	if(!av->initialized || addr > av->system_mem || bytes > av->system_mem - av->inuse)
 		return -1;
 
 	if((p = addr ? _int_gmalloc_manual(av, addr, bytes) : _int_gmalloc(av, bytes))){
+		uint64_t mem;
+
+		assert((mem = CHUNK_MEM(p)) < av->system_mem);
 		av->inuse += CHUNK_SIZE(p);
-		return CHUNK_MEM(p);
+
+		return mem;
 	}
 
 	return -1;
@@ -98,7 +102,7 @@ int gfree(uint64_t addr){
 	gmstate av = &arena;
 	gmchunkptr p;
 
-	if(!av->initialized)
+	if(!av->initialized || addr > av->system_mem)
 		return -1;
 
 	for(p = av->top; p; p = p->prev)
