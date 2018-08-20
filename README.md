@@ -4,6 +4,13 @@
 
 Ubuntu 18.04
 
+## requirement
+
+- make
+- gcc
+- nasm
+- execstack
+
 ## usage
 
 Build
@@ -16,6 +23,7 @@ Run
     $ ./run.sh
 
 ## attachement
+
 - run.sh
 - kvm.elf
 - kernel.bin (including flag1)

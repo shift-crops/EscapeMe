@@ -2,5 +2,7 @@
 
 cd `dirname $0`
 
+read -p "Any other modules? > " mod
+
 # only "-static" elf run
-./kvm.elf kernel.bin memo-static.elf flag2.txt
+exec ./kvm.elf kernel.bin memo-static.elf $mod
