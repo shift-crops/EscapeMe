@@ -11,30 +11,36 @@ void init(void){
 	setbuf(stdout, NULL);
 }
 
-static int set_seccomp(void);
+static int set_seccomp(int maxfd);
 
 int main(int argc, char *argv[]){
 	struct vm *vm;
 	unsigned long entry;
+	int nmod;
+	char **mods;
 
 	if(argc < 2){
-		char *arg[] = {NULL, "kernel.bin"};
-		argc = 2;
-		argv = arg;
+		char *arg[] = {"kernel.bin"};
+		nmod = 1;
+		mods = arg;
 	}
-	init_modules(argc-1, argv+1);
+	else {
+		nmod = argc-1;
+		mods = argv+1;
+	}
+	init_modules(nmod, mods);
 
 	if(!(vm = init_vm(1, GUEST_MEMSIZE)))
 		return -1;
-
 	if((entry = load_kernel(vm)) & 0xfff)
 		return -1;
 
-	if(set_seccomp())
+	if(set_seccomp(3+nmod+3))
 		return -1;
 
 	run_vm(vm, 0, entry);
 
+	fini_modules();
 	return 0;
 }
 
@@ -45,7 +51,8 @@ int main(int argc, char *argv[]){
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 
-static int set_seccomp(void){
+static int set_seccomp(int maxfd){
+	/*
 	struct sock_filter filter[] = {
 		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, arch))),
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_X86_64, 1, 0),
@@ -56,18 +63,54 @@ static int set_seccomp(void){
 		BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, __X32_SYSCALL_BIT, 0, 1),
 		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL),
 
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_ioctl, 0, 9),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_ioctl, 0, 4),
 		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, args[1]))),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_RUN, 7, 0),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_GET_REGS, 6, 0),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_SET_REGS, 5, 0),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_GET_SREGS, 4, 0),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_SET_SREGS, 3, 0),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_GET_MSRS, 2, 0),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_SET_GUEST_DEBUG, 1, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_CREATE_VM, 1, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_CREATE_VCPU, 0, 1),
 		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL),
 
 		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+	};
+	 */
+
+	struct sock_filter filter[] = {
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, arch))),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_X86_64, 1, 0),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL),
+
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr))),
+
+		BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, __X32_SYSCALL_BIT, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL),
+
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_read, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_write, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_close, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_lseek, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_brk, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_exit_group, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_ioctl, 0, 1),  // vuln
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, args[1]))),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_CREATE_VM, 5, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_CREATE_VCPU, 4, 0),
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, args[0]))),
+		BPF_STMT(BPF_ALU | BPF_AND | BPF_K, 0xff),
+		BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, maxfd, 1, 0),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL),
 	};
 
 	struct sock_fprog prog = {

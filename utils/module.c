@@ -15,6 +15,8 @@ struct modules {
 } *mod_list;
 
 int init_modules(unsigned nmod, char *list[]){
+	int n = 0;
+
 	if(!(mod_list = (struct modules*)malloc(sizeof(struct modules)+sizeof(int)*nmod)))
 		return -1;
 
@@ -22,8 +24,22 @@ int init_modules(unsigned nmod, char *list[]){
 	for(int i = 0; i < nmod; i++)
 		if((mod_list->fds[i] = open(list[i], O_RDONLY)) < 0)
 			perror(list[i]);
+		else
+			n++;
 
-	return 0;
+	return n;
+}
+
+void fini_modules(void){
+	if(!mod_list)
+		return;
+
+	int nmod = mod_list->nmod;
+	for(int i = 0; i < nmod; i++)
+		close(mod_list->fds[i]);
+
+	free(mod_list);
+	mod_list = NULL;
 }
 
 int load_module(struct vm *vm, int id, uint64_t addr, off_t offset, size_t size){
