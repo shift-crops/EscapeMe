@@ -35,8 +35,11 @@ void fini_modules(void){
 		return;
 
 	int nmod = mod_list->nmod;
-	for(int i = 0; i < nmod; i++)
-		close(mod_list->fds[i]);
+	for(int i = 0; i < nmod; i++){
+		int fd = mod_list->fds[i];
+		if(fd >= 0)
+			close(fd);
+	}
 
 	free(mod_list);
 	mod_list = NULL;

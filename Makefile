@@ -4,7 +4,7 @@ SRCS	:= main.c
 OBJS := $(SRCS:.c=.o)
 DEPS := $(SRCS:.c=.d)
 SUB_OBJS := vm/vm.a utils/utils.a
-CFLAGS   := -Wall -Wl,-z,relro,-z,now -fstack-protector -I..
+CFLAGS   := -Wall -Wl,-z,relro,-z,now -fstack-protector -I.. -g3
 
 .PHONY: all
 all: $(TARGET)
