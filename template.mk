@@ -1,7 +1,7 @@
 CSRCS	:= $(wildcard *.c)
 SSRCS	:= $(wildcard *.s)
 OBJS	:= $(SSRCS:.s=.o) $(CSRCS:.c=.o)
-DEPS	:= $(SRCS:.c=.d)
+DEPS	:= $(CSRCS:.c=.d)
 
 ifndef CFLAGS
 	CFLAGS	:= -Wall -I.. -masm=intel -fPIE -g3

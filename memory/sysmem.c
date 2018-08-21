@@ -11,7 +11,7 @@
   0xffffff0000 ~ 0xfffffff000 : stack		1:511:511:496-511
 */
 
-void init_pagetable(void){
+int init_pagetable(void){
 	uint64_t mem_size;
 	uint64_t *pml4, *pdpt, *pd, *pt;
 	uint64_t bss_phys, sp_phys, cr3;
@@ -23,17 +23,21 @@ void init_pagetable(void){
 	:"=r"(sp_phys), "=r"(cr3));
 	sp_phys &= ~0xfff;
 
-	pml4 = hc_malloc(0, 0x1000);
+	if((uint64_t)(pml4 = hc_malloc(0, 0x1000)) == -1)
+		return -1;
 
-	pdpt = hc_malloc(0, 0x1000);
+	if((uint64_t)(pdpt = hc_malloc(0, 0x1000)) == -1)
+		return -1;
 	pml4[0] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pdpt;
 	pml4[1] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pdpt;
 
-	pd = hc_malloc(0, 0x1000*3);
+	if((uint64_t)(pd = hc_malloc(0, 0x1000*3)) == -1)
+		return -1;
 	pdpt[0] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pd;
 
 	uint16_t n_pt = (mem_size>>21) + 1;
-	pt = hc_malloc(0, 0x1000*(2+n_pt+1));
+	if((uint64_t)(pt = hc_malloc(0, 0x1000*(2+n_pt+1))) == -1)
+		return -1;
 	pd[0] = PDE64_PRESENT | PDE64_GLOBAL | (uint64_t)pt;
 	for(int i = 0; i < 4; i++)
 		pt[i] = PDE64_PRESENT | PDE64_GLOBAL | (i<<12);
@@ -78,9 +82,11 @@ void init_pagetable(void){
 
 		"mov cr3, %0\r\n"
 	::"r"(pml4));
+
+	return 0;
 }
 
-void init_gdt(void){
+int init_gdt(void){
 	#define tsdp(type, s, dpl, p)	(type | (s << 4) | (dpl << 5) | (p << 7))
 	#define saldg(slh, avl, l, db, g)	(slh | (avl << 4) | (l << 5) | (db << 6) | (g << 7))
 
@@ -98,7 +104,8 @@ void init_gdt(void){
 		uint8_t base_high;
 	} *gdtptr;
 
-	gdtptr = (struct gdt*)(hc_malloc(0, 0x1000)+STRAIGHT_BASE);
+	if((uint64_t)(gdtptr = (struct gdt*)(hc_malloc(0, 0x1000)+STRAIGHT_BASE)) == -1)
+		return -1;
 	gdtr.size = sizeof(struct gdt)*6;
 	gdtr.base = gdtptr;
 
@@ -126,4 +133,6 @@ void init_gdt(void){
 		"lgdt [%0]\r\n"
 		"sti\r\n"
 	::"r"(&gdtr));
+
+	return 0;
 }

@@ -10,9 +10,11 @@ static void _syscall_handler(void);
 void kernel_main(void){
 	uint64_t entry;
 
-	init_pagetable();
+	if((init_pagetable()) < 0)
+		goto hlt;
 	// --- new paging enabled ---
-	init_gdt();
+	if(init_gdt() < 0)
+		goto hlt;
 
 	set_handler(_syscall_handler);
 	if(prepare_user() < 0)
