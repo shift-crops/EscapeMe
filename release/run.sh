@@ -1,8 +1,14 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 cd `dirname $0`
 
-read -p "Any other modules? > " mod
+stdbuf -i0 -o0 -e0 echo -n "Any other modules? > "
+read mod
 
-# only "-static" elf run
-exec ./kvm.elf kernel.bin memo-static.elf $mod
+if [[ $mod == */* ]]; then
+	echo "You can load modules only in this directory"
+else
+	# only "-static" elf run
+	exec ./kvm.elf kernel.bin memo-static.elf $mod
+fi
+
