@@ -14,14 +14,10 @@
 int init_pagetable(void){
 	uint64_t mem_size;
 	uint64_t *pml4, *pdpt, *pd, *pt;
-	uint64_t bss_phys, sp_phys, cr3;
+	uint64_t bss_phys, cr3;
 
 	mem_size = hc_mem_total();
-	asm volatile (
-		"mov %0, rsp\r\n"
-		"mov %1, cr3"
-	:"=r"(sp_phys), "=r"(cr3));
-	sp_phys &= ~0xfff;
+	asm volatile ("mov %0, cr3" : "=r"(cr3));
 
 	if((uint64_t)(pml4 = hc_malloc(0, 0x1000)) == -1)
 		return -1;
@@ -43,11 +39,11 @@ int init_pagetable(void){
 		pt[i] = PDE64_PRESENT | PDE64_GLOBAL | (i<<12);
 
 	pt += 512;
-	if((bss_phys = (uint64_t)hc_malloc(0, 0x1000*4)) != -1){
-		pd[1] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pt;
-		for(int i = 0; i < 4; i++)
-			pt[i] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (bss_phys+(i<<12));
-	}
+	if((bss_phys = (uint64_t)hc_malloc(0, 0x1000*4)) == -1)
+		return -1;
+	pd[1] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pt;
+	for(int i = 0; i < 4; i++)
+		pt[i] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (bss_phys+(i<<12));
 
 	pd += 512;
 	pt += 512;
@@ -63,8 +59,8 @@ int init_pagetable(void){
 
 	pdpt[511] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pd;
 	pd[511] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pt;
-	for(int i = 0; i < 2; i++)
-		pt[511-i] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (sp_phys-(i<<12));
+	for(int i = 1; i < 3; i++)
+		pt[512-i] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (kernel_stack-(i<<12));
 
 	asm volatile (
 		"mov rdx, 0x8000000000\r\n"

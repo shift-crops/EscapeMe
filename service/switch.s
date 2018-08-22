@@ -1,5 +1,6 @@
 global set_handler, switch_user, syscall_handler
 extern syscall
+extern kernel_stack
 
 set_handler:
 	xor rax, rax
@@ -16,14 +17,15 @@ set_handler:
 
 switch_user:
 	cli
+	mov  [rel + kernel_stack], rsp
 	mov   ax, 0x2b
 	mov   ds, eax
-	push  0x2b
-	push  rsi
-	pushfq
-	or    qword [rsp], 0x200
-	push  0x23
-	push  rdi
+	push 0x2b	; ss
+	push rsi	; stack
+	pushfq		; rflags
+	or   qword [rsp], 0x200
+	push 0x23	; cs
+	push rdi	; rip
 	xor rax, rax
 	xor rcx, rcx
 	xor rdx, rdx
@@ -42,20 +44,22 @@ switch_user:
 	iretq
 
 syscall_handler:
+	mov  r12, rsp
+	mov  rsp, [rel + kernel_stack]
+
 	push rax
 	call get_usercs
-	mov r12, rax
-	pop rax
+	mov  r13, rax
+	pop  rax
 
-	push r12
-	push rsp
-	push r11
-	push r12
-	push rcx
+	push r13	; ss
+	push r12	; rsp
+	push r11	; rflags
+	push r13	; cs
+	push rcx	; rip
 
-	add word [rsp+0x8], 3
-	add word [rsp+0x20], 0xb
-	add qword [rsp+0x18], 0x8
+	add  word [rsp+0x8], 3		; cs
+	add  word [rsp+0x20], 0xb	; ss
 
 	push rbx
 	push rsi

@@ -1,5 +1,5 @@
 global	_start
-extern	kernel_main
+extern	kernel_main, kernel_stack
 
 _start:
 	mov rax, 0x21
@@ -9,4 +9,5 @@ _start:
 
 	mov rsp, rax
 	add rsp, 0x2000
+	mov  [rel + kernel_stack], rsp
 	call kernel_main

@@ -5,8 +5,6 @@
 #include "memory/usermem.h"
 #include "service/switch.h"
 
-static void _syscall_handler(void);
-
 void kernel_main(void){
 	uint64_t entry;
 
@@ -16,7 +14,8 @@ void kernel_main(void){
 	if(init_gdt() < 0)
 		goto hlt;
 
-	set_handler(_syscall_handler);
+	asm("lea rdi, [rip + syscall_handler]\n"
+		"call set_handler");
 	if(prepare_user() < 0)
 		goto hlt;
 
@@ -28,8 +27,4 @@ void kernel_main(void){
 hlt:
 	asm("hlt");
 	goto hlt;
-}
-
-static void _syscall_handler(void){
-	asm("leave\r\njmp syscall_handler");
 }
