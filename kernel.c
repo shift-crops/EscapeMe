@@ -5,26 +5,24 @@
 #include "memory/usermem.h"
 #include "service/switch.h"
 
-void kernel_main(void){
+int kernel_main(void){
 	uint64_t entry;
 
 	if((init_pagetable()) < 0)
-		goto hlt;
+		return -1;
 	// --- new paging enabled ---
 	if(init_gdt() < 0)
-		goto hlt;
+		return -1;
 
 	asm("lea rdi, [rip + syscall_handler]\n"
 		"call set_handler");
 	if(prepare_user() < 0)
-		goto hlt;
+		return -1;
 
 	if((entry = load_elf()) == -1)
-		goto hlt;
+		return -1;
 
 	switch_user(entry, 0x7ffffffff0);
 
-hlt:
-	asm("hlt");
-	goto hlt;
+	return 0;
 }

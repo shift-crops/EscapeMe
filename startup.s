@@ -1,4 +1,4 @@
-global	_start
+global	_start, hlt
 extern	kernel_main, kernel_stack
 
 _start:
@@ -11,3 +11,7 @@ _start:
 	add rsp, 0x2000
 	mov  [rel + kernel_stack], rsp
 	call kernel_main
+
+hlt:
+	hlt
+	jmp hlt
