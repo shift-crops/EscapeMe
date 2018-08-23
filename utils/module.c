@@ -20,12 +20,35 @@ int init_modules(unsigned nmod, char *list[]){
 	if(!(mod_list = (struct modules*)malloc(sizeof(struct modules)+sizeof(int)*nmod)))
 		return -1;
 
-	mod_list->nmod = nmod;
-	for(int i = 0; i < nmod; i++)
-		if((mod_list->fds[i] = open(list[i], O_RDONLY)) < 0)
+	for(int i = 0; i < nmod; i++){
+		int fd;
+		struct stat stbuf;
+
+		if((fd = open(list[i], O_RDONLY)) < 0){
 			perror(list[i]);
-		else
-			n++;
+			continue;
+		}
+
+		if(fstat(fd, &stbuf) < -1){
+			perror("fstat");
+			goto err;
+		}
+
+		if(!S_ISREG(stbuf.st_mode)){
+			fprintf(stderr, "%s: Not a regular file\n", list[i]);
+			goto err;
+		}
+
+		mod_list->fds[n++] = fd;
+		continue;
+
+err:
+		close(fd);
+	}
+
+	mod_list->nmod = n;
+	if(!(mod_list = (struct modules*)realloc(mod_list, sizeof(struct modules)+sizeof(int)*n)))
+		return -1;
 
 	return n;
 }
@@ -64,7 +87,7 @@ int load_module(struct vm *vm, int id, uint64_t addr, off_t offset, size_t size)
 	if(!size){
 		struct stat stbuf;
 
-		if(fstat(fd, &stbuf) == -1){
+		if(fstat(fd, &stbuf) < 0){
 			perror("fstat");
 			return -1;
 		}
