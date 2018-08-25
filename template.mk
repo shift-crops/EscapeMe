@@ -1,13 +1,12 @@
-CSRCS := $(wildcard *.c)
-SSRCS := $(wildcard *.s)
+CSRCS  := $(wildcard *.c)
+SSRCS  := $(wildcard *.s)
 
-OBJS := $(CSRCS:.c=.o) $(SSRCS:.s=.o)
-DEPS := $(CSRCS:.c=.d)
+OBJS   := $(CSRCS:.c=.o) $(SSRCS:.s=.o)
+DEPS   := $(CSRCS:.c=.d)
 
 ifndef CFLAGS
-	CFLAGS := -Wall -fPIE -masm=intel
+CFLAGS := -Wall -masm=intel -fno-stack-protector -fPIE
 endif
-
 
 .PHONY: all
 all: $(TARGET)

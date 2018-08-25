@@ -9,6 +9,8 @@ EXPORT   := export.map
 CFLAGS   := -Wall -masm=intel -fno-stack-protector -fPIE
 LDFLAGS  := -shared -pie -nostdlib -E --version-script=$(EXPORT)
 
+export CFLAGS
+
 .PHONY: all
 all: $(SHARED_TARGET) $(STATIC_TARGET)
 	$(MAKE) -C test
@@ -22,7 +24,7 @@ $(STATIC_TARGET): $(SUB_OBJS)
 	$(RM) _$@
 
 $(SUB_OBJS): FORCE
-	$(MAKE) -C $(dir $@) CFLAGS="$(CFLAGS)" $(notdir $@)
+	$(MAKE) -C $(dir $@) $(notdir $@)
 
 .PHONY: clean
 clean: 
