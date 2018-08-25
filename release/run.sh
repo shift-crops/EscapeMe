@@ -11,4 +11,3 @@ else
 	# only "-static" elf run
 	exec ./kvm.elf kernel.bin memo-static.elf $mod
 fi
-

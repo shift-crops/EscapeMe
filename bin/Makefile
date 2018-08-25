@@ -1,11 +1,11 @@
+AS		:= nasm
+
 SRCS    := $(wildcard *.c)
 SHARED_TARGET   := $(SRCS:.c=-shared.elf)
 STATIC_TARGET   := $(SRCS:.c=-static.elf)
 
 CFLAGS  := -Wall -fno-stack-protector -fno-PIE
 LDFLAGS := -nostdlib -no-pie
-
-AS		:= nasm
 
 .PHONY: all
 all: $(SHARED_TARGET) $(STATIC_TARGET)
