@@ -1,9 +1,9 @@
-[submodule "libc"]
-	path = libc
-	url = git@gitlab.westerns.tokyo:ShiftCrops/tiny-libc.git
-[submodule "kernel"]
-	path = kernel
-	url = git@gitlab.westerns.tokyo:ShiftCrops/minimum-kernel.git
 [submodule "kvm"]
 	path = kvm
 	url = git@gitlab.westerns.tokyo:ShiftCrops/simple-kvm.git
+[submodule "kernel"]
+	path = kernel
+	url = git@gitlab.westerns.tokyo:ShiftCrops/minimum-kernel.git
+[submodule "libc"]
+	path = bin/libc
+	url = git@gitlab.westerns.tokyo:ShiftCrops/tiny-libc.git
