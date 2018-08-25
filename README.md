@@ -16,11 +16,21 @@ Ubuntu 18.04
 Build
 
     $ make
+    $ make FLAG=TWCTF  # generate real flag
 
 Run
 
     $ make run
-    $ ./run.sh
+
+    $ make
+    $ ./release/run.sh
+
+Exploit
+
+    $ make exploit
+
+    $ make
+    $ cd exploit && ./exploit.py
 
 Clean
 
