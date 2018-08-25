@@ -15,12 +15,16 @@ Ubuntu 18.04
 
 Build
 
-    $ ./build.sh
+    $ make
 
 Run
 
-    $ cd release
+    $ make run
     $ ./run.sh
+
+Clean
+
+    $ make clean
 
 ## attachement
 
@@ -30,4 +34,4 @@ Run
 - memo-static.elf
 - libc-2.27.so
 - flag2.txt
-- flag3.txt
+- flag3-sha1\_of\_flag.txt

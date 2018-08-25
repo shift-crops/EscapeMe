@@ -2,7 +2,6 @@
 !.git*
 
 *.txt
-!flag*
 
 *.swp
 
