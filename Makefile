@@ -1,3 +1,5 @@
+AS		:= nasm
+
 TARGET	:= kernel.elf kernel.bin
 #TARGET	:= kernel.bin
 
@@ -12,7 +14,8 @@ SUB_OBJS := memory/memory.a service/service.a elf/elf.a utils/utils.a
 CFLAGS	:= -Wall -I.. -masm=intel -fno-stack-protector -fPIE
 LDFLAGS	:= -nostdlib -Ttext 0x0
 
-AS		:= nasm
+export CFLAGS
+export CTF_FLAG1
 
 .PHONY: all
 all: $(TARGET)
@@ -32,7 +35,7 @@ all: $(TARGET)
 	$(AS) -f elf64 $^
 
 $(SUB_OBJS): FORCE
-	$(MAKE) -C $(dir $@) CFLAGS="$(CFLAGS)" $(notdir $@)
+	$(MAKE) -C $(dir $@) $(notdir $@)
 
 .PHONY: clean
 clean:

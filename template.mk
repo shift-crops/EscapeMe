@@ -1,13 +1,13 @@
+AS      := nasm
+
 CSRCS	:= $(wildcard *.c)
 SSRCS	:= $(wildcard *.s)
 OBJS	:= $(SSRCS:.s=.o) $(CSRCS:.c=.o)
 DEPS	:= $(CSRCS:.c=.d)
 
 ifndef CFLAGS
-	CFLAGS	:= -Wall -I.. -masm=intel -fPIE -g3
+CFLAGS  := -Wall -I.. -masm=intel -fPIE -g3
 endif
-
-AS		:= nasm
 
 .PHONY: all
 all: $(TARGET)

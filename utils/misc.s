@@ -1,4 +1,4 @@
-global memcpy, memset
+global memcpy, memset, strlen
 
 memcpy:
     mov rcx, rdx
@@ -8,8 +8,8 @@ memcpy:
     inc rdi
     inc rsi
     loop lc
-	mov rax, rdi
-	sub rax, rdx
+    mov rax, rdi
+    sub rax, rdx
     ret
 
 memset:
@@ -21,3 +21,13 @@ memset:
     mov rax, rdi
     sub rax, rdx
     ret
+
+strlen:
+	xor rcx, rcx
+	ll:
+	mov al, [rdi+rcx]
+	inc rcx
+	test al, al
+	jne ll
+	lea rax, [rcx-1]
+	ret

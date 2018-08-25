@@ -6,8 +6,6 @@
 #include "memory/usermem.h"
 #include "utils/misc.h"
 
-#define FLAG1			"XXXXX{11111111111111111111111111111111}"
-
 #define NR_read         0
 #define NR_write        1
 
