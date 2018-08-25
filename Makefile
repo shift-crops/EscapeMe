@@ -6,6 +6,8 @@ DEPS := $(SRCS:.c=.d)
 SUB_OBJS := vm/vm.a utils/utils.a
 CFLAGS   := -Wall -Wl,-z,relro,-z,now -fstack-protector -I.. -g3
 
+export CFLAGS
+
 .PHONY: all
 all: $(TARGET)
 
@@ -16,7 +18,7 @@ $(TARGET): $(OBJS) $(SUB_OBJS)
 	$(CC) $(CFLAGS) -c -MMD -MP $<
 
 $(SUB_OBJS): FORCE
-	$(MAKE) -C $(dir $@) CFLAGS="$(CFLAGS)" $(notdir $@)
+	$(MAKE) -C $(dir $@) $(notdir $@)
 
 .PHONY: clean
 clean:
