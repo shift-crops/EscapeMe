@@ -1,17 +1,17 @@
 # EscapeMe
 
-## environment
+## Environment
 
 Ubuntu 18.04
 
-## requirement
+## Requirement
 
 - make
 - gcc
 - nasm
 - execstack
 
-## usage
+## Usage
 
 Build
 
@@ -37,7 +37,7 @@ Clean
 
     $ make clean
 
-## attachement
+## Attachement
 
 - run.sh
 - kvm.elf
@@ -47,14 +47,14 @@ Clean
 - flag2.txt
 - flag3-sha1\_of\_flag.txt
 
-## deployment
+## Deployment on CTF Server
 
-    $ls -al /home/escape
+    $ ls -al /home/escape
     drwxrwxr-x 2 root root          4096 Aug 25 23:38 .
     drwxrwxr-x 8 root root          4096 Aug 25 23:50 ..
-    -rwxr-sr-x 1 root escape\_flag  52080 Feb 18  2016 cat
+    -rwxr-sr-x 1 root escape_flag  52080 Feb 18  2016 cat
     -rw-r----- 1 root escape          62 Aug 25 21:57 flag2.txt
-    -rw-r----- 1 root escape\_flag     61 Aug 25 21:57 flag3-sha1\_of\_flag.txt
+    -rw-r----- 1 root escape_flag     61 Aug 25 21:57 flag3-sha1_of_flag.txt
     -rwxr----- 1 root escape        8488 Aug 25 22:31 kernel.bin
     -rwxr-x--- 1 root escape      186720 Aug 25 22:32 kvm.elf
     -rwxr-x--- 1 root escape       20240 Aug 25 22:31 memo-static.elf

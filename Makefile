@@ -23,7 +23,7 @@ all: $(TARGET) $(FLAG_TARGET)
 
 $(TARGET): $(SUB_OBJS)
 	cp $^ release
-	strip release/kvm.elf
+	strip -K main -K palloc release/kvm.elf
 
 $(OUTDIR)/flag2.txt:
 	echo "Here is second flag : ${CTF_FLAG2}" > $(OUTDIR)/flag2.txt
