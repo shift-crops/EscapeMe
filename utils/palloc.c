@@ -25,7 +25,7 @@
 #define REQUEST2SIZE(req) 	((req) < MINSIZE ? MINSIZE : ((req) + GMALLOC_ALIGN_MASK) & ~GMALLOC_ALIGN_MASK)
 
 #define BIN_AT(av, idx) \
-			((gmbinptr)((void*)&((av)->bins[(idx) * 2]) - offsetof(struct gmalloc_chunk, fd)))
+			((gmbinptr)((void*)&((av)->bins[(idx) * 2]) - offsetof(struct gmem_chunk, fd)))
 #define FIRST(b)				((b)->fd)
 #define LAST(b)					((b)->bk)
 
@@ -34,15 +34,15 @@
 #define INUSE(p)				((p)->fd == NULL)
 
 
-struct gmalloc_chunk {
+struct gmem_chunk {
 	uint64_t addr;
 	size_t size;
-	struct gmalloc_chunk *fd, *bk;		// free list
-	struct gmalloc_chunk *next, *prev;	// all chunks
+	struct gmem_chunk *fd, *bk;		// free list
+	struct gmem_chunk *next, *prev;	// all chunks
 };
-typedef struct gmalloc_chunk *gmchunkptr, *gmbinptr;
+typedef struct gmem_chunk *gmchunkptr, *gmbinptr;
 
-struct gmalloc_state {
+struct gmem_state {
 	unsigned initialized;
 
 	gmchunkptr top;
@@ -51,17 +51,17 @@ struct gmalloc_state {
 	size_t inuse;
 	size_t system_mem;
 } arena;
-typedef struct gmalloc_state *gmstate;
+typedef struct gmem_state *gmstate;
 
-static gmchunkptr _int_gmalloc(gmstate av, size_t bytes);
-static gmchunkptr _int_gmalloc_manual(gmstate av, uint64_t addr, size_t bytes);
-static void _int_gfree(gmstate av, gmchunkptr p);
+static gmchunkptr _int_palloc(gmstate av, size_t bytes);
+static gmchunkptr _int_palloc_manual(gmstate av, uint64_t addr, size_t bytes);
+static void _int_pfree(gmstate av, gmchunkptr p);
 
 void init_gmem_manage(size_t mem_size){
 	gmstate av = &arena;
 	gmchunkptr top;
 
-	top = (gmchunkptr)calloc(1, sizeof(struct gmalloc_chunk));
+	top = (gmchunkptr)calloc(1, sizeof(struct gmem_chunk));
 	top->addr = 0;
 	top->size = mem_size;
 	top->fd   = top->bk   = NULL;
@@ -79,14 +79,14 @@ void init_gmem_manage(size_t mem_size){
 	av->initialized = 1;
 }
 
-uint64_t gmalloc(uint64_t addr, size_t bytes){
+uint64_t palloc(uint64_t addr, size_t bytes){
 	gmstate av = &arena;
 	gmchunkptr p;
 
 	if(!av->initialized || addr > av->system_mem || bytes > av->system_mem - av->inuse)
 		return -1;
 
-	if((p = addr ? _int_gmalloc_manual(av, addr, bytes) : _int_gmalloc(av, bytes))){
+	if((p = addr ? _int_palloc_manual(av, addr, bytes) : _int_palloc(av, bytes))){
 		uint64_t mem;
 
 		assert((mem = CHUNK_MEM(p)) < av->system_mem);
@@ -98,7 +98,7 @@ uint64_t gmalloc(uint64_t addr, size_t bytes){
 	return -1;
 }
 
-int gfree(uint64_t addr){
+int pfree(uint64_t addr){
 	gmstate av = &arena;
 	gmchunkptr p;
 
@@ -107,7 +107,7 @@ int gfree(uint64_t addr){
 
 	for(p = av->top; p; p = p->prev)
 		if(CHUNK_MEM(p) == addr){
-			_int_gfree(av, p);
+			_int_pfree(av, p);
 			av->inuse -= CHUNK_SIZE(p);
 			return 0;
 		}
@@ -134,7 +134,7 @@ static void link_bins(gmstate av, gmchunkptr p);
 static void _alloc_split(gmstate av, gmchunkptr p, size_t nb);
 static gmchunkptr _alloc_top(gmstate av, size_t nb);
 
-static gmchunkptr _int_gmalloc(gmstate av, size_t bytes){
+static gmchunkptr _int_palloc(gmstate av, size_t bytes){
 	gmchunkptr victim;
 
 	size_t nb;
@@ -196,7 +196,7 @@ alloc_complete:
 	return victim;
 }
 
-static gmchunkptr _int_gmalloc_manual(gmstate av, uint64_t addr, size_t bytes){
+static gmchunkptr _int_palloc_manual(gmstate av, uint64_t addr, size_t bytes){
 	gmchunkptr victim, tmp = NULL;
 	size_t nb;
 
@@ -232,12 +232,12 @@ static gmchunkptr _int_gmalloc_manual(gmstate av, uint64_t addr, size_t bytes){
 	}
 
 	if(tmp)
-		_int_gfree(av, tmp);
+		_int_pfree(av, tmp);
 
 	return victim;
 }
 
-static void _int_gfree(gmstate av, gmchunkptr p){
+static void _int_pfree(gmstate av, gmchunkptr p){
 	gmchunkptr next, prev;
 
 	next = p->next;
@@ -351,7 +351,7 @@ static void _alloc_split(gmstate av, gmchunkptr p, size_t nb){
 	if(!remainder_size)
 		return;
 
-	remainder = (gmchunkptr)calloc(1, sizeof(struct gmalloc_chunk));
+	remainder = (gmchunkptr)calloc(1, sizeof(struct gmem_chunk));
 	CHUNK_MEM(remainder)  = CHUNK_MEM(p) + nb;
 	CHUNK_SIZE(remainder) = remainder_size;
 	remainder->next = p->next;

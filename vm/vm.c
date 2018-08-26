@@ -11,7 +11,7 @@
 #include "bits.h"
 #include "vm/vm.h"
 #include "vm/kvm_handler.h"
-#include "utils/gmalloc.h"
+#include "utils/palloc.h"
 #include "utils/translate.h"
 #include "utils/debug.h"
 
@@ -250,9 +250,9 @@ static int set_long_mode(struct vm *vm, int vcpufd){
 	seg.selector = 2 << 3;
 	sregs.ds = sregs.ss = seg;
 
-	uint64_t pml4_addr 	= gmalloc(0, 0x1000);
-	uint64_t pdpt_addr 	= gmalloc(0, 0x1000*(((vm->mem_size-1)>>39) + 1));
-	uint64_t pd_addr 	= gmalloc(0, 0x1000*(((vm->mem_size-1)>>30) + 1));
+	uint64_t pml4_addr 	= palloc(0, 0x1000);
+	uint64_t pdpt_addr 	= palloc(0, 0x1000*(((vm->mem_size-1)>>39) + 1));
+	uint64_t pd_addr 	= palloc(0, 0x1000*(((vm->mem_size-1)>>30) + 1));
 
 	assert_addr(vm, pml4_addr);
 	assert_addr(vm, pdpt_addr);

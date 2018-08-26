@@ -7,7 +7,7 @@
 #include "vm/vm.h"
 #include "vm/kvm_handler.h"
 #include "utils/translate.h"
-#include "utils/gmalloc.h"
+#include "utils/palloc.h"
 #include "utils/module.h"
 
 int kvm_handle_io(struct vm *vm, struct vcpu *vcpu){
@@ -52,12 +52,12 @@ int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu){
 		case 0x20:
 			ret = get_gmem_info(arg[0]);
 			break;
-		case 0x21:		// gmalloc(phys_addr, size=0)
-			if((ret = gmalloc(arg[0], arg[1])) != -1)
+		case 0x21:		// palloc(phys_addr, size=0)
+			if((ret = palloc(arg[0], arg[1])) != -1)
 				memset(guest2phys(vm, ret), 0, arg[1]);
 			break;
-		case 0x22:		// gfree(phys_addr);
-			ret = gfree(arg[0]);
+		case 0x22:		// pfree(phys_addr);
+			ret = pfree(arg[0]);
 			break;
 		case 0x30:		// load_module(id, phys_addr=0, offset=0, size=0)
 			ret = load_module(vm, arg[0], arg[1], arg[2], arg[3]);

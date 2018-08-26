@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include "vm/vm.h"
-#include "utils/gmalloc.h"
+#include "utils/palloc.h"
 #include "utils/module.h"
 
 struct modules {
@@ -95,8 +95,8 @@ int load_module(struct vm *vm, int id, uint64_t addr, off_t offset, size_t size)
 		size = stbuf.st_size;
 	}
 
-	if((addr = gmalloc(addr, aligned_size = (size + 0x1000-1) & ~0xfff)) == -1){
-		perror("gmalloc");
+	if((addr = palloc(addr, aligned_size = (size + 0x1000-1) & ~0xfff)) == -1){
+		perror("palloc");
 		return -1;
 	}
 	memset(guest2phys(vm, addr), 0, aligned_size);
