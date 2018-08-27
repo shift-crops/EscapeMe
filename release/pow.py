@@ -21,13 +21,13 @@ import random
 import string
 import sys
 import os
-
+import resource
 
 SKIP_SECRET = sys.argv[1] if len(sys.argv) > 1 else None
- 
+
 bits = 28
-resource = ''.join(random.choice(string.ascii_lowercase) for i in range(8))
-print 'hashcash -mb{} {}'.format(bits, resource)
+rand_resource = ''.join(random.choice(string.ascii_lowercase) for i in range(8))
+print 'hashcash -mb{} {}'.format(bits, rand_resource)
 sys.stdout.flush()
 
 stamp = sys.stdin.readline().strip()
@@ -37,7 +37,7 @@ if SKIP_SECRET is None or stamp != SKIP_SECRET:
         print 'only hashcash v1 supported'
         exit(1)
 
-    if not check(stamp, resource=resource, bits=bits):
+    if not check(stamp, resource=rand_resource, bits=bits):
         print 'invalid'
         exit(1)
 
@@ -55,4 +55,9 @@ else:
 
     dirname = os.path.dirname(__file__)
     os.chdir(dirname)
+
+    os.close(2)
+    os.open('/dev/null', os.O_WRONLY)
+
+    resource.setrlimit(resource.RLIMIT_NOFILE, (9, 9))
     os.execv(args[0], args)

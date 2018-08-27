@@ -1,6 +1,6 @@
 AS		:= nasm
 
-SRCS    := $(wildcard *.c)
+SRCS            := $(wildcard *.c)
 SHARED_TARGET   := $(SRCS:.c=-shared.elf)
 STATIC_TARGET   := $(SRCS:.c=-static.elf)
 
