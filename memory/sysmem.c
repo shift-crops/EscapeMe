@@ -8,7 +8,7 @@
   0x8000000000 ~ 0x8000004000 : binary		1:0:0:0-3
   0x8000200000 ~ 0x8000204000 : bss			1:0:1:0-3
   0x8040000000 ~ 0x807ffff000 : straight	1:1:0-511:0-511
-  0xffffff0000 ~ 0xfffffff000 : stack		1:511:511:496-511
+  0xffffffc000 ~ 0xfffffff000 : stack		1:511:511:508-511
 */
 
 int init_pagetable(void){
@@ -31,7 +31,7 @@ int init_pagetable(void){
 		return -1;
 	pdpt[0] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pd;
 
-	uint16_t n_pt = (mem_size>>21) + 1;
+	uint16_t n_pt = (mem_size>>21) + (mem_size & ((1<<21)-1)) ? 1 : 0;
 	if((uint64_t)(pt = hc_malloc(0, 0x1000*(2+n_pt+1))) == -1)
 		return -1;
 	pd[0] = PDE64_PRESENT | PDE64_GLOBAL | (uint64_t)pt;
@@ -51,7 +51,8 @@ int init_pagetable(void){
 	pdpt[1] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pd;
 	for(int i = 0; i < n_pt; i++, pt += 512){
 		pd[i] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pt;
-		for(int j = 0; j < ((mem_size-(i<<21))>>12); j++)
+		uint16_t n_page = (mem_size>>21)-i > 0 ? 512 : (mem_size & ((1<<21)-1))>>12;
+		for(int j = 0; j < n_page; j++)
 			pt[j] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | ((i<<21)|(j<<12));
 	}
 
@@ -59,7 +60,7 @@ int init_pagetable(void){
 
 	pdpt[511] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pd;
 	pd[511] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (uint64_t)pt;
-	for(int i = 1; i < 3; i++)
+	for(int i = 1; i < 5; i++)
 		pt[512-i] = PDE64_PRESENT | PDE64_RW | PDE64_GLOBAL | (kernel_stack-(i<<12));
 
 	asm volatile (

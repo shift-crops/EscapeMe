@@ -11,7 +11,7 @@
   0x0000400000 ~ 0x0000403000 : binary		0:0:2:0-2
   0x0000603000 ~ 0x0000604000 : bss			0:0:3:3
   0x0000608000 ~ 0x0000610000 : heap 		0:0:3:8-16
-  0x7fffff0000 ~ 0x7ffffff000 : stack		0:511:511:496-511
+  0x7fffffc000 ~ 0x7ffffff000 : stack		0:511:511:508-511
 */
 
 int prepare_user(void){
@@ -39,8 +39,8 @@ int prepare_user(void){
 	// stack
 	if((page_phys = (uint64_t)hc_malloc(0, 0x1000*4)) == -1)
 		return -1;
-	for(int i = 512-4; i < 512; i++)
-		pt[i] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (page_phys+(i<<12));
+	for(int i = 0; i < 4; i++)
+		pt[512-4+i] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (page_phys+(i<<12));
 
 	return 0;
 }
@@ -94,7 +94,7 @@ static uint64_t mappable_size(uint64_t vaddr, size_t length){
 	uint64_t *pml4, *pdpt, *pd, *pt;
 
 	uint16_t idx[]  = { (vaddr>>39) & 0x1ff, (vaddr>>30) & 0x1ff, (vaddr>>21) & 0x1ff, (vaddr>>12) & 0x1ff };
-	uint64_t mappable;
+	uint64_t mappable = 0;
 
 	asm volatile ("mov %0, cr3":"=r"(pml4_phys));
 	pml4 = (uint64_t*)(pml4_phys+STRAIGHT_BASE);
