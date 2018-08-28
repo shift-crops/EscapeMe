@@ -192,8 +192,8 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 				if((gaddr = translate(vm, sregs.cr3, regs.rip, 0, 0)) == -1)
 					return 1;
 
-				if(!memcmp(guest2phys(vm, gaddr), "\x0f\x01\xc1", 3) \
-					|| !memcmp(guest2phys(vm, gaddr), "\x0f\x01\xd9", 3)){
+				if(!memcmp(guest2host(vm, gaddr), "\x0f\x01\xc1", 3) \
+					|| !memcmp(guest2host(vm, gaddr), "\x0f\x01\xd9", 3)){
 					if(sregs.cs.dpl != 0)
 						return 2;
 
@@ -201,9 +201,9 @@ int run_vm(struct vm *vm, unsigned vcpuid, uint64_t entry){
 					printf("HYPERCALL\n");
 #endif
 					kvm_handle_hypercall(vm, vcpu);
-					*(char*)guest2phys(vm, gaddr+2) = 0xd9;
+					*(char*)guest2host(vm, gaddr+2) = 0xd9;
 				}
-				else if(!memcmp(guest2phys(vm, gaddr), "\x0f\x05", 2)){
+				else if(!memcmp(guest2host(vm, gaddr), "\x0f\x05", 2)){
 					if(sregs.cs.dpl != 3)
 						return 2;
 
@@ -258,9 +258,9 @@ static int set_long_mode(struct vm *vm, int vcpufd){
 	assert_addr(vm, pdpt_addr);
 	assert_addr(vm, pd_addr);
 
-	uint64_t *pml4	= guest2phys(vm, pml4_addr);
-	uint64_t *pdpt	= guest2phys(vm, pdpt_addr);
-	uint64_t *pd 	= guest2phys(vm, pd_addr);
+	uint64_t *pml4	= guest2host(vm, pml4_addr);
+	uint64_t *pdpt	= guest2host(vm, pdpt_addr);
+	uint64_t *pd 	= guest2host(vm, pd_addr);
 
 	for(int i = 0; i < ((vm->mem_size-1)>>39 & 0x1ff) + 1; i++){
 		for(int j = 0; j < ((vm->mem_size-1)>>30 & 0x1ff) + 1; j++){

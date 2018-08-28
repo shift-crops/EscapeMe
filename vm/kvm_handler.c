@@ -10,6 +10,12 @@
 #include "utils/palloc.h"
 #include "utils/module.h"
 
+#define foreach_gpage(a, l) \
+	for(uint64_t size, gvaddr = (a), len = (l), endaddr = gvaddr + len; endaddr > gvaddr && \
+			(size = ((endaddr & ~((1<<12)-1)) > gvaddr) ? \
+			(gvaddr & ((1<<12)-1) ? ((~gvaddr)+1) & ((1<<12)-1) : 1<<12) : len ) > 0; \
+		gvaddr += size, len -= size)
+
 int kvm_handle_io(struct vm *vm, struct vcpu *vcpu){
 	/*
 	int vcpufd = vcpu->fd;
@@ -22,7 +28,6 @@ int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu){
 	struct kvm_regs regs;
 	struct kvm_sregs sregs;
 	int vcpufd = vcpu->fd;
-	uint64_t gaddr;
 	unsigned long ret = -1;
 
 	if(ioctl(vcpufd, KVM_GET_REGS, &regs) < 0){
@@ -42,19 +47,41 @@ int kvm_handle_hypercall(struct vm *vm, struct vcpu *vcpu){
 #endif
 	switch(nr){
 		case 0x10:		// read(0, buf, size)
-			if((gaddr = translate(vm, sregs.cr3, arg[0], 1, arg[2])) != -1)
-				ret = read(STDIN_FILENO, guest2phys(vm, gaddr), arg[1]);
+			ret = 0;
+			foreach_gpage(arg[0], arg[1]){	// uint64_t gvaddr, size;
+				ssize_t n;
+				uint64_t gpaddr;
+
+				if((gpaddr = translate(vm, sregs.cr3, gvaddr, 1, arg[2])) == -1)
+					break;
+				n = read(STDIN_FILENO, guest2host(vm, gpaddr), size);
+				ret += n;
+
+				if(n < size)
+					break;
+			}
 			break;
 		case 0x11:		// write(1, buf, size)
-			if((gaddr = translate(vm, sregs.cr3, arg[0], 0, arg[2])) != -1)
-				ret = write(STDOUT_FILENO, guest2phys(vm, gaddr), arg[1]);
+			ret = 0;
+			foreach_gpage(arg[0], arg[1]){	// uint64_t gvaddr, size;
+				ssize_t n;
+				uint64_t gpaddr;
+
+				if((gpaddr = translate(vm, sregs.cr3, gvaddr, 0, arg[2])) == -1)
+					break;
+				n = write(STDOUT_FILENO, guest2host(vm, gpaddr), size);
+				ret += n;
+
+				if(n < size)
+					break;
+			}
 			break;
 		case 0x20:
 			ret = get_gmem_info(arg[0]);
 			break;
 		case 0x21:		// palloc(phys_addr, size=0)
 			if((ret = palloc(arg[0], arg[1])) != -1)
-				memset(guest2phys(vm, ret), 0, arg[1]);
+				memset(guest2host(vm, ret), 0, arg[1]);
 			break;
 		case 0x22:		// pfree(phys_addr);
 			ret = pfree(arg[0]);
@@ -151,7 +178,7 @@ int kvm_handle_syscall(struct vm *vm, struct vcpu *vcpu){
 	if(!gdt_base)
 		goto err;
 
-	gdt_base = (uint64_t*)guest2phys(vm, (uint64_t)gdt_base);
+	gdt_base = (uint64_t*)guest2host(vm, (uint64_t)gdt_base);
 
 	uint64_t cs_raw = gdt_base[kernel_cs/8], ss_raw = gdt_base[kernel_cs/8 + 1];
 	struct kvm_segment cs = extract_segment(kernel_cs, cs_raw);

@@ -99,14 +99,14 @@ int load_module(struct vm *vm, int id, uint64_t addr, off_t offset, size_t size)
 		perror("palloc");
 		return -1;
 	}
-	memset(guest2phys(vm, addr), 0, aligned_size);
+	memset(guest2host(vm, addr), 0, aligned_size);
 
 	if(lseek(fd, offset, SEEK_SET) == -1){
 		perror("lseek");
 		return -1;
 	}
 
-	if(read(fd, guest2phys(vm, addr), size) == -1){
+	if(read(fd, guest2host(vm, addr), size) == -1){
 		perror("read");
 		return -1;
 	}

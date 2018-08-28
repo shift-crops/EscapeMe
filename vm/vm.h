@@ -7,7 +7,7 @@
 
 #define check_addr(vm, addr)		(addr < vm->mem_size)
 #define assert_addr(vm, addr)		assert(addr < vm->mem_size)
-#define guest2phys(vm, addr)		(vm->mem + addr)
+#define guest2host(vm, addr)		(vm->mem + addr)
 
 struct vcpu {
 	int fd;

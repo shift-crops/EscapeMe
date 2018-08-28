@@ -38,17 +38,17 @@ uint64_t translate(struct vm *vm, uint64_t pml4_addr, uint64_t laddr, int write,
 	uint16_t idx[]  = { (laddr>>39) & 0x1ff, (laddr>>30) & 0x1ff, (laddr>>21) & 0x1ff, (laddr>>12) & 0x1ff };
 	uint64_t paddr = -1;
 
-	uint64_t *pml4	= guest2phys(vm, pml4_addr);
+	uint64_t *pml4	= guest2host(vm, pml4_addr);
 
 	uint64_t pdpt_addr 	= pml4[idx[0]] & ~0xfff;
 	if(!CHK_PERMISSION(pml4[idx[0]]))
 		goto end;
-	uint64_t *pdpt	= guest2phys(vm, pdpt_addr);
+	uint64_t *pdpt	= guest2host(vm, pdpt_addr);
 
 	uint64_t pd_addr 	= pdpt[idx[1]] & ~0xfff;
 	if(!CHK_PERMISSION(pdpt[idx[1]]))
 		goto end;
-	uint64_t *pd 	= guest2phys(vm, pd_addr);
+	uint64_t *pd 	= guest2host(vm, pd_addr);
 
 	uint64_t pt_addr 	= pd[idx[2]] & ~0xfff;
 	if(!CHK_PERMISSION(pd[idx[2]]))
@@ -61,7 +61,7 @@ uint64_t translate(struct vm *vm, uint64_t pml4_addr, uint64_t laddr, int write,
 		goto end;	// vuln
 	}
 
-	uint64_t *pt 	= guest2phys(vm, pt_addr);
+	uint64_t *pt 	= guest2host(vm, pt_addr);
 	if(!CHK_PERMISSION(pt[idx[3]]))
 		goto end;
 
