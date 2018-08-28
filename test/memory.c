@@ -1,31 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <sys/mman.h>
 
-char *global = "Hello!";
+int data = 0xdeadbeef;
+int bss;
 
 int main(void){
-	char *buf1, *buf2;
+	int stack;
+	void *heap, *mmaped[2];
 
-	puts(global);
+	heap = malloc(0x10);
+	mmaped[0] = mmap((void*)0x80000000, 0x1000, 3, 0x22, -1, 0);
+	mmaped[1] = mmap(NULL, 0x1000, 3, 0x22, -1, 0);
 
-	puts("malloc 0x100");
-	buf1 = malloc(0x100);
-	puts("malloc 0x30000");
-	buf2 = malloc(0x30000);
+	printf(	"text 		: %p\n"
+			"data 		: %p\n"
+			"bss 		: %p\n"
+			"heap 		: %p\n"
+			"mmaped 1 	: %p\n"
+			"mmaped 2 	: %p\n"
+			"stack		: %p\n"
+			, main, &data, &bss, heap, mmaped[0], mmaped[1], &stack);
 
-	write(1, "Input strings...", 16);
-	read(0, buf1, 128);
-	puts(buf1);
-
-	write(1, "Input strings...", 16);
-	read(0, buf2, 128);
-	puts(buf2);
-
-	puts("free 0x100");
-	free(buf1);
-	puts("free 0x30000");
-	free(buf2);
-
-	return 0;
+	for(int i=0; i<2; i++)
+		munmap(mmaped[i], 0x1000);
+	free(heap);
 }

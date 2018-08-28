@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdarg.h>
 
-char *itoa(int value, char *str, int radix);
+char *itoa(int64_t value, char *str, int radix);
 
 char *printf_buf;
 
@@ -20,10 +21,10 @@ int printf(const char *fmt, ...){
 	va_start(ap, fmt);
 	va_copy(ap2, ap);
 	for(p = fmt; (p = strchr(p, '%')); p += 2){
-		register unsigned long arg;
-		long v;
+		register uint64_t arg;
+		int64_t v;
 
-		arg = va_arg(ap, unsigned long);
+		arg = va_arg(ap, uint64_t);
 		switch(*(p+1)){
 			case 'p':
 				n += 2;
@@ -34,7 +35,7 @@ int printf(const char *fmt, ...){
 					n++;
 					v = -v;
 				}
-				for(n++; v; n++, v /= (*(p+1)=='d'? 10:16));
+				for(n++; v /= (*(p+1)=='d'? 10:16); n++);
 				goto next;
 			case 's':
 				n += strlen((char*)arg);
@@ -57,11 +58,11 @@ next:
 
 		buf[0] = '\x0';
 		while((p = strchr(fmt, '%'))){
-			register unsigned long arg;
+			register uint64_t arg;
 
 			strncat(buf, fmt, p-fmt);
 
-			arg = va_arg(ap2, unsigned long);
+			arg = va_arg(ap2, uint64_t);
 			switch(*(p+1)){
 				case 'p':
 					strncat(buf, "0x", 2);
@@ -100,11 +101,11 @@ int sprintf(char *buf, char *fmt, ...){
 
 	buf[0] = '\0';
 	while((p = strchr(fmt, '%'))){
-		register unsigned long arg;
+		register uint64_t arg;
 
 		strncat(buf, fmt, p-fmt);
-			
-		arg = va_arg(ap, unsigned long);
+
+		arg = va_arg(ap, uint64_t);
 		switch(*(p+1)){
 			case 'p':
 				strncat(buf, "0x", 2);

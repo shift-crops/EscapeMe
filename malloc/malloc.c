@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <assert.h>
 #include <sys/mman.h>
 
@@ -69,7 +70,7 @@
 #define SET_NONCONTIGUOUS(M)		((M)->flags |= NONCONTIGUOUS_BIT)
 #define SET_CONTIGUOUS(M)			((M)->flags &= ~NONCONTIGUOUS_BIT)
 
-#define HEAP_FOR_PTR(ptr)			((hinfo) ((unsigned long) (ptr) & ~(HEAP_MAX_SIZE - 1)))
+#define HEAP_FOR_PTR(ptr)			((hinfo) ((uint64_t) (ptr) & ~(HEAP_MAX_SIZE - 1)))
 #define ARENA_FOR_CHUNK(ptr)		(NON_MAIN_ARENA(ptr) ? HEAP_FOR_PTR(ptr)->ar_ptr : &main_arena)
 
 struct malloc_state main_arena;
@@ -191,7 +192,7 @@ void *calloc(size_t n, size_t elem_size){
 static void *_int_malloc(mstate av, size_t bytes){
 	mchunkptr victim;
 	void *mem;
-	
+
 	size_t size, nb;
 	unsigned idx;
 	mbinptr bin;
@@ -218,7 +219,7 @@ static void *_int_malloc(mstate av, size_t bytes){
 
 	while((victim = UNSORTED_CHUNKS(av)->bk) != UNSORTED_CHUNKS(av)){
 		unlink_freelist(victim);
-		
+
 		size = CHUNK_SIZE(victim);
 		if(size == nb){
 			SET_INUSE_AT_OFFSET(victim, size);
@@ -380,7 +381,7 @@ static void *_int_realloc(mstate av, mchunkptr oldp, size_t oldsize, size_t nb){
 newalloc:
 	do{
 		void *newmem;
-		
+
 		newmem = _int_malloc(av, nb - MALLOC_ALIGN_MASK);
 		if(!newmem)
 			return NULL;
@@ -417,7 +418,7 @@ static void *sysmalloc(mstate av, size_t nb){
 
 	if(!av || nb > mp.mmap_threshold){
 		void *mm;
-		long correction;
+		int64_t correction;
 		size_t front_misalign;
 
 		size = ALIGN_UP(nb + MINSIZE, PAGESIZE);
@@ -449,7 +450,7 @@ try_brk:
 	brk = (void*) -1;
 
 	assert(old_size < nb + MINSIZE);
-	
+
 	if(av == &main_arena){
 		size = nb + MINSIZE;
 
@@ -467,7 +468,7 @@ try_brk:
 		if(brk == old_end)
 			SET_HEAD(old_top, (size + old_size) | PREV_INUSE_BIT);
 		else{
-			long correction;
+			int64_t correction;
 			void *snd_brk, *aligned_brk;
 			size_t front_misalign, end_misalign;
 
@@ -502,7 +503,7 @@ try_brk:
 				correction = 0;
 				snd_brk = sbrk(0);
 			}
-			
+
 			av->top = (mchunkptr)aligned_brk;
 			SET_HEAD(av->top, (snd_brk - aligned_brk + correction) | PREV_INUSE_BIT);
 			av->system_mem += correction;
@@ -522,7 +523,7 @@ static void _alloc_split(mstate av, mchunkptr p, size_t nb){
 	size_t size, remainder_size;
 
 	size = CHUNK_SIZE(p);
-	assert(size >= nb); 
+	assert(size >= nb);
 
 	remainder_size = size - nb;
 	if(remainder_size < MINSIZE)
@@ -642,7 +643,7 @@ static void unlink_freelist(mchunkptr p){
 	printf("[%s]unlink : %p\n", __func__, p);
 #endif
 	assert(fwd->bk == p && bck->fd == p);
-	
+
 	bck->fd = fwd;
 	fwd->bk = bck;
 
@@ -661,7 +662,7 @@ static void unlink_freelist(mchunkptr p){
 		else if (p->fd_nextsize == p)
 			fwd->fd_nextsize = fwd->bk_nextsize = fwd;
 		else{
-			fwd->fd_nextsize = fwd_ns; 
+			fwd->fd_nextsize = fwd_ns;
 			fwd->bk_nextsize = bck_ns;
 			fwd_ns->bk_nextsize = bck_ns->fd_nextsize = fwd;
 		}

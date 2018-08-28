@@ -2,6 +2,7 @@
 #define __MALLOC_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #define SIZE_SZ			(sizeof(size_t))
 
@@ -17,16 +18,16 @@
 #define FASTBIN_INDEX(sz)	((((unsigned int)(sz)) >> (SIZE_SZ == 8 ? 4 : 3)) - 2)
 #define SMALLBIN_INDEX(sz)	((SMALLBIN_WIDTH == 16 ? (((unsigned)(sz)) >> 4) : (((unsigned) (sz)) >> 3)) + SMALLBIN_CORRECTION)
 #define LARGEBIN_INDEX(sz)	\
-	(((((unsigned long) (sz)) >> 6) <= 48) ?  48 + (((unsigned long) (sz)) >> 6) :\
-	 ((((unsigned long) (sz)) >> 9) <= 20) ?  91 + (((unsigned long) (sz)) >> 9) :\
-	 ((((unsigned long) (sz)) >> 12) <= 10) ? 110 + (((unsigned long) (sz)) >> 12) :\
-	 ((((unsigned long) (sz)) >> 15) <= 4) ? 119 + (((unsigned long) (sz)) >> 15) :\
-	 ((((unsigned long) (sz)) >> 18) <= 2) ? 124 + (((unsigned long) (sz)) >> 18) : 126)
+	(((((uint64_t) (sz)) >> 6) <= 48) ?  48 + (((uint64_t) (sz)) >> 6) :\
+	 ((((uint64_t) (sz)) >> 9) <= 20) ?  91 + (((uint64_t) (sz)) >> 9) :\
+	 ((((uint64_t) (sz)) >> 12) <= 10) ? 110 + (((uint64_t) (sz)) >> 12) :\
+	 ((((uint64_t) (sz)) >> 15) <= 4) ? 119 + (((uint64_t) (sz)) >> 15) :\
+	 ((((uint64_t) (sz)) >> 18) <= 2) ? 124 + (((uint64_t) (sz)) >> 18) : 126)
 
 #define MALLOC_ALIGNMENT	(SIZE_SZ*2 < __alignof__(long double) ? __alignof__(long double) : SIZE_SZ*2)
 #define MALLOC_ALIGN_MASK	(MALLOC_ALIGNMENT - 1)
 #define MIN_CHUNK_SIZE		(offsetof(struct malloc_chunk, fd_nextsize))
-#define MINSIZE  		((unsigned long)((MIN_CHUNK_SIZE+MALLOC_ALIGN_MASK) & ~MALLOC_ALIGN_MASK))
+#define MINSIZE  		((uint64_t)((MIN_CHUNK_SIZE+MALLOC_ALIGN_MASK) & ~MALLOC_ALIGN_MASK))
 #define REQUEST2SIZE(req) \
 	(((req) + SIZE_SZ + MALLOC_ALIGN_MASK < MINSIZE) ? MINSIZE : ((req) + SIZE_SZ + MALLOC_ALIGN_MASK) & ~MALLOC_ALIGN_MASK)
 
@@ -42,13 +43,13 @@ typedef struct malloc_chunk *mchunkptr, *mfastbinptr, *mbinptr;
 struct malloc_state {
 	char mutex;
 	int flags;
-	
+
 	mfastbinptr fastbinsY[NFASTBINS];
 
 	mchunkptr top;
 	mchunkptr last_reminder;
 	mbinptr bins[NBINS*2];
-	
+
 	struct malloc_state *next;
 	size_t system_mem;
 };

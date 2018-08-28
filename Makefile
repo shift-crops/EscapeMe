@@ -6,7 +6,7 @@ SUB_OBJS := io/io.a libio/libio.a \
 			assert/assert.a misc/misc.a
 EXPORT   := export.map
 
-CFLAGS   := -Wall -masm=intel -fno-stack-protector -fPIE
+CFLAGS   := -Wall -masm=intel -fno-stack-protector -fPIE -g3
 LDFLAGS  := -shared -pie -nostdlib -E --version-script=$(EXPORT)
 
 export CFLAGS
@@ -27,7 +27,7 @@ $(SUB_OBJS): FORCE
 	$(MAKE) -C $(dir $@) $(notdir $@)
 
 .PHONY: clean
-clean: 
+clean:
 	dirname $(SUB_OBJS) | xargs -l $(MAKE) clean -C
 	$(MAKE) clean -C test
 	$(RM) $(SHARED_TARGET) $(STATIC_TARGET)
