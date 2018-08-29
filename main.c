@@ -18,6 +18,12 @@ int main(int argc, char *argv[]){
 	unsigned long entry;
 	int nmod;
 	char **mods;
+	int fds;
+
+	if((fds = open("/dev/null", O_RDONLY)) < 0)
+		fds = 3;
+	else
+		close(fds);
 
 	if(argc < 2){
 		char *arg[] = {"kernel.bin"};
@@ -35,7 +41,7 @@ int main(int argc, char *argv[]){
 	if((entry = load_kernel(vm)) & 0xfff)
 		return -1;
 
-	if(set_seccomp(3+nmod+3))
+	if(set_seccomp(fds+nmod+3))
 		return -1;
 
 	run_vm(vm, 0, entry);
@@ -52,27 +58,6 @@ int main(int argc, char *argv[]){
 #include <sys/syscall.h>
 
 static int set_seccomp(int maxfd){
-	/*
-	struct sock_filter filter[] = {
-		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, arch))),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_X86_64, 1, 0),
-		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL),
-
-		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr))),
-
-		BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, __X32_SYSCALL_BIT, 0, 1),
-		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL),
-
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_ioctl, 0, 4),
-		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, args[1]))),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_CREATE_VM, 1, 0),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, KVM_CREATE_VCPU, 0, 1),
-		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL),
-
-		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
-	};
-	 */
-
 	struct sock_filter filter[] = {
 		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, arch))),
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_X86_64, 1, 0),

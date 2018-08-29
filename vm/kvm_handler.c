@@ -11,9 +11,8 @@
 #include "utils/module.h"
 
 #define foreach_gpage(a, l) \
-	for(uint64_t size, gvaddr = (a), len = (l), endaddr = gvaddr + len; endaddr > gvaddr && \
-			(size = ((endaddr & ~((1<<12)-1)) > gvaddr) ? \
-			(gvaddr & ((1<<12)-1) ? ((~gvaddr)+1) & ((1<<12)-1) : 1<<12) : len ) > 0; \
+	for(uint64_t size, gvaddr = (a), len = (l), endaddr = gvaddr + len; \
+		endaddr > gvaddr && (size = ((endaddr & ~((1<<12)-1)) > gvaddr) ? (((~gvaddr)+1) & ((1<<12)-1) ?: 1<<12) : len ) > 0; \
 		gvaddr += size, len -= size)
 
 int kvm_handle_io(struct vm *vm, struct vcpu *vcpu){
