@@ -1,0 +1,29 @@
+{
+	global:
+		read;
+		write;
+		puts;
+		malloc;
+		calloc;
+		realloc;
+		free;
+		brk;
+		sbrk;
+		mmap;
+		mprotect;
+		munmap;
+		abort;
+		atoi;
+		itoa;
+		exit;
+		memset;
+		memcpy;
+		strlen;
+		strcat;
+		strncat;
+		strchr;
+		strdup;
+		printf;
+		sprintf;
+	local: *;
+};
