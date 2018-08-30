@@ -10,10 +10,12 @@ ifdef FLAG
 CTF_FLAG1   := ${FLAG}{fr33ly_3x3cu73_4ny_5y573m_c4ll}
 CTF_FLAG2   := ${FLAG}{ABI_1nc0n51573ncy_l34d5_70_5y573m_d357ruc710n}
 CTF_FLAG3   := ${FLAG}{Or1g1n4l_Hyp3rc4ll_15_4_h07b3d_0f_bug5}
+FLAG3_NAME  := flag3-`echo -n ${CTF_FLAG3} | sha1sum | cut -d' ' -f1`.txt
 else
 CTF_FLAG1   := XXXXX{11111111111111111111111111111111}
 CTF_FLAG2   := XXXXX{22222222222222222222222222222222}
 CTF_FLAG3   := XXXXX{33333333333333333333333333333333}
+FLAG3_NAME  := flag3-sha1_of_flag.txt
 endif
 
 export CTF_FLAG1
@@ -30,7 +32,7 @@ $(OUTDIR)/flag2.txt:
 	echo "Here is second flag : ${CTF_FLAG2}" > $(OUTDIR)/flag2.txt
 
 $(OUTDIR)/flag3-*.txt:
-	echo "Here is final flag : ${CTF_FLAG3}" > $(OUTDIR)/flag3-`echo -n ${CTF_FLAG3} | sha1sum | cut -d' ' -f1`.txt
+	echo "Here is final flag : ${CTF_FLAG3}" > $(OUTDIR)/$(FLAG3_NAME)
 
 $(EXPLOIT): kernel/kernel.elf
 	$(MAKE) -C exploit SYS_HANDLER=0x0`nm $< | grep syscall_handler | cut -d' ' -f1`
@@ -47,9 +49,14 @@ run: $(TARGET) $(FLAG_TARGET)
 exploit: $(TARGET) $(FLAG_TARGET) $(EXPLOIT)
 	cd exploit && ./exploit.py
 
+.PHONY: release
+release: $(TARGET) $(FLAG_TARGET)
+	bash -c "cd $(OUTDIR) && tar zcf EscapeMe.tar.gz {*.elf,*.bin,*.so,*.txt,pow.py}"
+
 .PHONY: clean
 clean:
 	dirname $(SUB_OBJS) | xargs -l $(MAKE) clean -C
-	$(RM) $(TARGET) $(FLAG_TARGET) $(EXPLOIT)
+	$(MAKE) clean -C exploit
+	$(RM) $(TARGET) $(FLAG_TARGET) $(OUTDIR)/EscapeMe.tar.gz
 
 FORCE:
