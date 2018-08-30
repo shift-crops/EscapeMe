@@ -25,7 +25,7 @@ import resource
 
 SKIP_SECRET = sys.argv[1] if len(sys.argv) > 1 else None
 
-bits = 28
+bits = 25
 rand_resource = ''.join(random.choice(string.ascii_lowercase) for i in range(8))
 print 'hashcash -mb{} {}'.format(bits, rand_resource)
 sys.stdout.flush()
@@ -47,17 +47,17 @@ sys.stdout.flush()
 mods = sys.stdin.readline().strip()
 if '/' in mods:
     print 'You can load modules only in this directory'
-else:
-    args  = ['./kvm.elf', 'kernel.bin', 'memo-static.elf']
-    args += mods.split()
+    exit(1)
 
-    print '\nexecuting : {}\n'.format(' '.join(args))
+args  = ['./kvm.elf', 'kernel.bin', 'memo-static.elf']
+args += mods.split()
+print '\nexecuting : {}\n'.format(' '.join(args))
 
-    dirname = os.path.dirname(__file__)
-    os.chdir(dirname)
+dirname = os.path.dirname(__file__)
+os.chdir(dirname)
 
-    os.close(2)
-    os.open('/dev/null', os.O_WRONLY)
+os.close(2)
+os.open('/dev/null', os.O_WRONLY)
 
-    resource.setrlimit(resource.RLIMIT_NOFILE, (9, 9))
-    os.execv(args[0], args)
+resource.setrlimit(resource.RLIMIT_NOFILE, (9, 9))
+os.execv(args[0], args)

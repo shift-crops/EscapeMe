@@ -4,7 +4,7 @@ SRCS            := $(wildcard *.c)
 SHARED_TARGET   := $(SRCS:.c=-shared.elf)
 STATIC_TARGET   := $(SRCS:.c=-static.elf)
 
-CFLAGS  := -Wall -fno-stack-protector -fno-PIE
+CFLAGS  := -Wall -fno-stack-protector -fno-PIE -g3
 LDFLAGS := -nostdlib -no-pie
 
 .PHONY: all

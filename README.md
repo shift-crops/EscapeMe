@@ -2,7 +2,7 @@
 
 ## Environment
 
-Ubuntu 16.04
+Ubuntu 18.04
 
 ## Requirement
 
@@ -43,7 +43,7 @@ Clean
 - kvm.elf
 - kernel.bin (including flag1)
 - memo-static.elf
-- libc-2.23.so
+- libc-2.27.so
 - flag2.txt
 - flag3-sha1\_of\_flag.txt
 
